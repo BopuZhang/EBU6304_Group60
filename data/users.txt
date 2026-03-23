@@ -1,0 +1,4 @@
+admin@bupt.edu,admin123,Admin,系统管理员
+953934380@qq.com,12345678,TA,Bopu Zhang
+953934381@qq.com,12345678,MO,BopuZhang
+953934382@qq.com,12345678,Admin,BopuZhang
