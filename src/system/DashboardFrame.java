@@ -1,0 +1,284 @@
+package system;
+
+import javax.swing.*;
+import java.awt.*;
+import java.util.List;
+
+public class DashboardFrame extends JFrame {
+    private User currentUser;
+    private List<User> users;
+    private JPanel contentPanel;
+
+    public DashboardFrame(User user, List<User> users) {
+        this.currentUser = user;
+        this.users = users;
+
+        setTitle("TA Recruitment System - " + user.getRole() + " Dashboard");
+        setSize(900, 650);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setBackground(UIHelper.BACKGROUND_COLOR);
+
+        initUI();
+        setVisible(true);
+    }
+
+    private void initUI() {
+        setLayout(new BorderLayout());
+
+        // Top header panel
+        JPanel topPanel = new JPanel();
+        topPanel.setBackground(UIHelper.PRIMARY_COLOR);
+        topPanel.setPreferredSize(new Dimension(900, 70));
+        topPanel.setLayout(new BorderLayout());
+
+        JLabel welcomeLabel = new JLabel("Welcome, " + currentUser.getName() + " (" + currentUser.getRole() + ")");
+        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        welcomeLabel.setForeground(Color.WHITE);
+        welcomeLabel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 0));
+        topPanel.add(welcomeLabel, BorderLayout.WEST);
+
+        JButton logoutBtn = UIHelper.createButton("Logout", new Color(200, 70, 70));
+        logoutBtn.setPreferredSize(new Dimension(100, 40));
+        logoutBtn.addActionListener(e -> logout());
+        topPanel.add(logoutBtn, BorderLayout.EAST);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        // Left menu panel
+        JPanel menuPanel = new JPanel();
+        menuPanel.setBackground(UIHelper.BACKGROUND_COLOR);
+        menuPanel.setPreferredSize(new Dimension(220, 650));
+        menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
+        menuPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+
+        // Add menu items based on role
+        if (currentUser.getRole().equals("TA")) {
+            addMenuItem(menuPanel, "Create Personal Profile", e -> createProfile());
+            addMenuItem(menuPanel, "Edit Personal Profile", e -> editProfile());
+            addMenuItem(menuPanel, "Upload CV", e -> uploadCV());
+            addMenuItem(menuPanel, "View Available Positions", e -> viewJobs());
+            addMenuItem(menuPanel, "Check Application Status", e -> viewApplications());
+        } else if (currentUser.getRole().equals("MO")) {
+            addMenuItem(menuPanel, "Post Position", e -> postJob());
+            addMenuItem(menuPanel, "View Positions I've Posted", e -> viewMyJobs());
+            addMenuItem(menuPanel, "View Applicants", e -> viewApplicants());
+            addMenuItem(menuPanel, "Edit Posted Position", e -> editPostedPosition());
+        } else { // Admin
+            addMenuItem(menuPanel, "View All Teaching Assistants", e -> viewAllTAs());
+            addMenuItem(menuPanel, "View TA Workload", e -> viewWorkload());
+            addMenuItem(menuPanel, "Manage Workload", e -> manageWorkload());
+            addMenuItem(menuPanel, "View All Positions", e -> viewAllJobs());
+        }
+
+        // Add glue at the end to push items to top
+        menuPanel.add(Box.createVerticalGlue());
+
+        add(menuPanel, BorderLayout.WEST);
+
+        // Right content panel
+        contentPanel = new JPanel();
+        contentPanel.setBackground(Color.WHITE);
+        contentPanel.setLayout(new BorderLayout());
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel defaultLabel = new JLabel("Select an option from the menu", SwingConstants.CENTER);
+        defaultLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        defaultLabel.setForeground(new Color(150, 150, 150));
+        contentPanel.add(defaultLabel, BorderLayout.CENTER);
+
+        add(contentPanel, BorderLayout.CENTER);
+    }
+
+    private void addMenuItem(JPanel panel, String text, java.awt.event.ActionListener action) {
+        JButton button = new JButton(text);
+        button.setMaximumSize(new Dimension(200, 45));
+        button.setPreferredSize(new Dimension(200, 45));
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setBackground(Color.WHITE);
+        button.setForeground(UIHelper.PRIMARY_COLOR);
+        button.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220)));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.addActionListener(action);
+
+        // Hover effect
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(240, 240, 240));
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(Color.WHITE);
+            }
+        });
+
+        panel.add(Box.createRigidArea(new Dimension(0, 8)));
+        panel.add(button);
+    }
+
+    private void setContent(JPanel panel) {
+        contentPanel.removeAll();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }
+
+    // ========== Helper Methods ==========
+
+    private void addInfoRow(JPanel panel, String label, String value) {
+        JPanel row = new JPanel();
+        row.setLayout(new BorderLayout());
+        row.setBackground(Color.WHITE);
+        row.setMaximumSize(new Dimension(600, 35));
+        row.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(240, 240, 240)));
+
+        JLabel labelLabel = new JLabel(label);
+        labelLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        labelLabel.setForeground(new Color(100, 100, 100));
+
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        row.add(labelLabel, BorderLayout.WEST);
+        row.add(valueLabel, BorderLayout.EAST);
+
+        panel.add(row);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+    }
+
+    private void showPlaceholder(String featureName) {
+        JPanel panel = new JPanel();
+        panel.setBackground(Color.WHITE);
+        panel.setLayout(new BorderLayout());
+
+        JLabel placeholder = new JLabel(featureName + " will be implemented soon", SwingConstants.CENTER);
+        placeholder.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        placeholder.setForeground(new Color(150, 150, 150));
+        panel.add(placeholder, BorderLayout.CENTER);
+
+        setContent(panel);
+    }
+
+    private int getTACount() {
+        int count = 0;
+        for (User user : users) {
+            if (user.getRole().equals("TA")) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    // ========== TA Functions ==========
+
+    private void createProfile() {
+        showPlaceholder("Create Personal Profile");
+    }
+
+    private void editProfile() {
+        showPlaceholder("Edit Personal Profile");
+    }
+
+    private void viewProfile() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel titleLabel = new JLabel("My Profile");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        addInfoRow(panel, "Email:", currentUser.getEmail());
+        addInfoRow(panel, "Name:", currentUser.getName());
+        addInfoRow(panel, "Role:", currentUser.getRole());
+
+        setContent(panel);
+    }
+
+    private void uploadCV() {
+        showPlaceholder("Upload CV");
+    }
+
+    private void viewJobs() {
+        showPlaceholder("View Available Positions");
+    }
+
+    private void viewApplications() {
+        showPlaceholder("Check Application Status");
+    }
+
+    // ========== MO Functions ==========
+
+    private void postJob() {
+        showPlaceholder("Post Position");
+    }
+
+    private void viewMyJobs() {
+        showPlaceholder("View Positions I've Posted");
+    }
+
+    private void viewApplicants() {
+        showPlaceholder("View Applicants");
+    }
+
+    private void editPostedPosition() {
+        showPlaceholder("Edit Posted Position");
+    }
+
+    // ========== Admin Functions ==========
+
+    private void viewAllTAs() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel titleLabel = new JLabel("All Teaching Assistants");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 15)));
+
+        for (User user : users) {
+            if (user.getRole().equals("TA")) {
+                addInfoRow(panel, user.getName(), user.getEmail());
+            }
+        }
+
+        if (getTACount() == 0) {
+            JLabel emptyLabel = new JLabel("No TA registered yet");
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panel.add(emptyLabel);
+        }
+
+        setContent(panel);
+    }
+
+    private void viewWorkload() {
+        showPlaceholder("View TA Workload");
+    }
+
+    private void manageWorkload() {
+        showPlaceholder("Manage Workload");
+    }
+
+    private void viewAllJobs() {
+        showPlaceholder("View All Positions");
+    }
+
+    private void logout() {
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?", "Confirm", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            dispose();
+            new LoginFrame();
+        }
+    }
+}
