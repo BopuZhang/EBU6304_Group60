@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class DashboardFrame extends JFrame {
     private User currentUser;
@@ -58,8 +60,9 @@ public class DashboardFrame extends JFrame {
             addMenuItem(menuPanel, "Create Personal Profile", e -> createProfile());
             addMenuItem(menuPanel, "Edit Personal Profile", e -> editProfile());
             addMenuItem(menuPanel, "Upload CV", e -> uploadCV());
-            addMenuItem(menuPanel, "View Available Positions", e -> viewJobs());
-            addMenuItem(menuPanel, "Check Application Status", e -> viewApplications());
+            addMenuItem(menuPanel, "View Available Positions", e -> viewJobs()); // TA-05
+            addMenuItem(menuPanel, "Apply for Position", e -> applyForJob()); // TA-06 新增菜单
+            addMenuItem(menuPanel, "Check Application Status", e -> viewApplications()); // TA-07
         } else if (currentUser.getRole().equals("MO")) {
             addMenuItem(menuPanel, "Post Position", e -> postJob());
             addMenuItem(menuPanel, "View Positions I've Posted", e -> viewMyJobs());
@@ -206,34 +209,57 @@ public class DashboardFrame extends JFrame {
         showPlaceholder("Upload CV");
     }
 
+    // TA-05 查看可用岗位（优化版）
     private void viewJobs() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
         panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel titleLabel = new JLabel("Available Positions");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        panel.add(titleLabel, BorderLayout.NORTH);
 
         JTextArea area = new JTextArea();
         area.setFont(new Font("Monospaced", Font.PLAIN, 13));
         area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("===== AVAILABLE POSITIONS =====\n");
+        sb.append("===== AVAILABLE POSITIONS =====\n\n");
 
         try {
-            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader("data/jobs.txt"));
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line).append("\n");
+            File jobFile = new File("data/jobs.txt");
+            // SYS-01 数据持久化：文件不存在则创建
+            if (!jobFile.exists()) {
+                jobFile.getParentFile().mkdirs(); // 创建data文件夹
+                jobFile.createNewFile();
+                sb.append("No positions available at this time.\n");
+            } else {
+                BufferedReader br = new BufferedReader(new FileReader(jobFile));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
+                    sb.append(line).append("\n");
+                }
+                br.close();
+                // 无岗位数据时提示
+                if (sb.toString().equals("===== AVAILABLE POSITIONS =====\n\n")) {
+                    sb.append("No positions available at this time.\n");
+                }
             }
-            br.close();
-            LoggerUtil.logInfo("TA viewed available jobs");
+            LoggerUtil.logInfo("TA " + currentUser.getEmail() + " viewed available positions"); // SYS-03 日志
         } catch (Exception e) {
-            e.printStackTrace();
-            sb.append("No jobs available right now.\n");
-            LoggerUtil.logError("FILE_ERROR", "Failed to load jobs");
+            e.printStackTrace(); // SYS-02 错误处理
+            sb.append("Failed to load positions: ").append(e.getMessage()).append("\n");
+            LoggerUtil.logError("FILE_ERROR", "TA " + currentUser.getEmail() + " failed to load jobs: " + e.getMessage());
         }
 
         area.setText(sb.toString());
         JScrollPane sp = new JScrollPane(area);
+        sp.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         panel.add(sp, BorderLayout.CENTER);
 
         contentPanel.removeAll();
@@ -242,34 +268,152 @@ public class DashboardFrame extends JFrame {
         contentPanel.repaint();
     }
 
+    // TA-06 申请岗位（新增核心方法）
+    private void applyForJob() {
+        // 1. 弹出输入框输入Job ID
+        String jobId = JOptionPane.showInputDialog(this,
+                "Enter Job ID to apply (e.g., J001):",
+                "Apply for Position",
+                JOptionPane.PLAIN_MESSAGE);
+
+        // 2. 校验输入
+        if (jobId == null || jobId.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Job ID cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        jobId = jobId.trim();
+
+        // 3. 校验岗位是否存在
+        boolean jobExists = false;
+        try {
+            File jobFile = new File("data/jobs.txt");
+            if (jobFile.exists()) {
+                BufferedReader br = new BufferedReader(new FileReader(jobFile));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (line.startsWith(jobId + ",")) {
+                        jobExists = true;
+                        break;
+                    }
+                }
+                br.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Failed to verify job ID!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (!jobExists) {
+            JOptionPane.showMessageDialog(this, "Job ID " + jobId + " does not exist!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 4. 构建申请记录（格式：申请时间,申请人邮箱,Job ID,状态）
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String applyTime = sdf.format(new Date());
+        String applicationRecord = String.format("%s,%s,%s,pending",
+                applyTime,
+                currentUser.getEmail(),
+                jobId);
+
+        // 5. 写入applications.txt（追加模式）
+        try {
+            File appFile = new File("data/applications.txt");
+            appFile.getParentFile().mkdirs(); // 确保data文件夹存在
+            BufferedWriter bw = new BufferedWriter(new FileWriter(appFile, true));
+            bw.write(applicationRecord);
+            bw.newLine();
+            bw.close();
+
+            JOptionPane.showMessageDialog(this, "Application submitted successfully!\nJob ID: " + jobId, "Success", JOptionPane.INFORMATION_MESSAGE);
+            LoggerUtil.logInfo("TA " + currentUser.getEmail() + " applied for job: " + jobId); // SYS-03 日志
+        } catch (Exception e) {
+            e.printStackTrace(); // SYS-02 错误处理
+            JOptionPane.showMessageDialog(this, "Failed to submit application!", "Error", JOptionPane.ERROR_MESSAGE);
+            LoggerUtil.logError("APPLICATION_ERROR", "TA " + currentUser.getEmail() + " failed to apply for job " + jobId + ": " + e.getMessage());
+        }
+
+        // 6. 提交后自动跳转到申请状态页面（TA-07）
+        viewApplications();
+    }
+
+    // TA-07 查看申请状态（优化版）
     private void viewApplications() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
         panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        // 标题
+        JLabel titleLabel = new JLabel("My Application Status");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        // 申请状态展示区域
         JTextArea area = new JTextArea();
         area.setFont(new Font("Monospaced", Font.PLAIN, 13));
         area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("===== MY APPLICATIONS =====\n");
+        sb.append("===== MY APPLICATION STATUS =====\n\n");
+        sb.append(String.format("%-20s %-15s %-12s\n", "Apply Time", "Job ID", "Status"));
+        sb.append("---------------------------------------------\n");
 
+        // 读取并筛选当前TA的申请
+        boolean hasApplication = false;
         try {
-            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader("data/applications.txt"));
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line).append("\n");
+            File appFile = new File("data/applications.txt");
+            // SYS-01 数据持久化：文件不存在则创建
+            if (!appFile.exists()) {
+                appFile.getParentFile().mkdirs();
+                appFile.createNewFile();
+                sb.append("No applications submitted yet.\n");
+            } else {
+                BufferedReader br = new BufferedReader(new FileReader(appFile));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
+                    // 解析记录：申请时间,申请人邮箱,Job ID,状态
+                    String[] parts = line.split(",");
+                    if (parts.length != 4) continue; // 跳过格式错误的行（SYS-02）
+
+                    String applyTime = parts[0];
+                    String applicantEmail = parts[1];
+                    String jobId = parts[2];
+                    String status = parts[3];
+
+                    // 筛选当前TA的申请
+                    if (applicantEmail.equals(currentUser.getEmail())) {
+                        hasApplication = true;
+                        // 美化状态显示
+                        String statusDisplay = switch (status.toLowerCase()) {
+                            case "pending" -> "Pending ⏳";
+                            case "approved" -> "Approved ✅";
+                            case "rejected" -> "Rejected ❌";
+                            default -> "Unknown ❓";
+                        };
+                        sb.append(String.format("%-20s %-15s %-12s\n", applyTime, jobId, statusDisplay));
+                    }
+                }
+                br.close();
+                if (!hasApplication) {
+                    sb.append("No applications submitted yet.\n");
+                }
             }
-            br.close();
-            LoggerUtil.logInfo("TA viewed their applications");
+            LoggerUtil.logInfo("TA " + currentUser.getEmail() + " checked application status"); // SYS-03 日志
         } catch (Exception e) {
-            e.printStackTrace();
-            sb.append("You have not applied for any jobs.\n");
-            LoggerUtil.logError("FILE_ERROR", "Failed to load applications");
+            e.printStackTrace(); // SYS-02 错误处理
+            sb.append("Failed to load application status: ").append(e.getMessage()).append("\n");
+            LoggerUtil.logError("APPLICATION_STATUS_ERROR", "TA " + currentUser.getEmail() + " failed to load application status: " + e.getMessage());
         }
 
         area.setText(sb.toString());
         JScrollPane sp = new JScrollPane(area);
+        sp.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         panel.add(sp, BorderLayout.CENTER);
 
         contentPanel.removeAll();
@@ -277,6 +421,8 @@ public class DashboardFrame extends JFrame {
         contentPanel.revalidate();
         contentPanel.repaint();
     }
+
+    // ========== MO Functions ==========
     private void postJob() {
         showPlaceholder("Post Position");
     }
@@ -294,7 +440,6 @@ public class DashboardFrame extends JFrame {
     }
 
     // ========== Admin Functions ==========
-
     private void viewAllTAs() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -346,6 +491,7 @@ public class DashboardFrame extends JFrame {
             new LoginFrame();
         }
     }
+
     private void viewLogs() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
