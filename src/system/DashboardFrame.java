@@ -207,15 +207,76 @@ public class DashboardFrame extends JFrame {
     }
 
     private void viewJobs() {
-        showPlaceholder("View Available Positions");
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+
+        JTextArea area = new JTextArea();
+        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        area.setEditable(false);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("===== AVAILABLE POSITIONS =====\n");
+
+        try {
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader("data/jobs.txt"));
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            br.close();
+            LoggerUtil.logInfo("TA viewed available jobs");
+        } catch (Exception e) {
+            e.printStackTrace();
+            sb.append("No jobs available right now.\n");
+            LoggerUtil.logError("FILE_ERROR", "Failed to load jobs");
+        }
+
+        area.setText(sb.toString());
+        JScrollPane sp = new JScrollPane(area);
+        panel.add(sp, BorderLayout.CENTER);
+
+        contentPanel.removeAll();
+        contentPanel.add(panel);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void viewApplications() {
-        showPlaceholder("Check Application Status");
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+
+        JTextArea area = new JTextArea();
+        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        area.setEditable(false);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("===== MY APPLICATIONS =====\n");
+
+        try {
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader("data/applications.txt"));
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            br.close();
+            LoggerUtil.logInfo("TA viewed their applications");
+        } catch (Exception e) {
+            e.printStackTrace();
+            sb.append("You have not applied for any jobs.\n");
+            LoggerUtil.logError("FILE_ERROR", "Failed to load applications");
+        }
+
+        area.setText(sb.toString());
+        JScrollPane sp = new JScrollPane(area);
+        panel.add(sp, BorderLayout.CENTER);
+
+        contentPanel.removeAll();
+        contentPanel.add(panel);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
-
-    // ========== MO Functions ==========
-
     private void postJob() {
         showPlaceholder("Post Position");
     }
