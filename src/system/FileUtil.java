@@ -19,6 +19,7 @@ public class FileUtil {
             File dir = new File(DATA_DIR);
             if (!dir.exists()) {
                 dir.mkdirs();
+                LoggerUtil.logInfo("Created data directory: " + DATA_DIR);
             }
 
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "users.txt"))) {
@@ -26,8 +27,10 @@ public class FileUtil {
                     writer.write(user.toString());
                     writer.newLine();
                 }
+                LoggerUtil.logInfo("Users saved successfully. Total: " + users.size());
             }
         } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to save users: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -40,6 +43,7 @@ public class FileUtil {
         File file = new File(DATA_DIR + "users.txt");
 
         if (!file.exists()) {
+            LoggerUtil.logInfo("Users file does not exist, starting with empty list");
             return users;
         }
 
@@ -50,9 +54,13 @@ public class FileUtil {
                 if (parts.length == 4) {
                     User user = new User(parts[0], parts[1], parts[2], parts[3]);
                     users.add(user);
+                } else {
+                    LoggerUtil.logError("File Format", "Invalid line format: " + line);
                 }
             }
+            LoggerUtil.logInfo("Users loaded successfully. Total: " + users.size());
         } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to load users: " + e.getMessage());
             e.printStackTrace();
         }
         return users;

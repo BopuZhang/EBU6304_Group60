@@ -139,7 +139,7 @@ public class LoginFrame extends JFrame {
                 return;
             }
         }
-
+        LoggerUtil.logError("Login Failed", "Invalid credentials for email: " + email);
         JOptionPane.showMessageDialog(this, "Invalid email or password", "Login Failed", JOptionPane.ERROR_MESSAGE);
     }
 

@@ -3,6 +3,7 @@ package system;
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
+import java.io.*;
 
 public class DashboardFrame extends JFrame {
     private User currentUser;
@@ -69,6 +70,7 @@ public class DashboardFrame extends JFrame {
             addMenuItem(menuPanel, "View TA Workload", e -> viewWorkload());
             addMenuItem(menuPanel, "Manage Workload", e -> manageWorkload());
             addMenuItem(menuPanel, "View All Positions", e -> viewAllJobs());
+            addMenuItem(menuPanel, "View System Logs", e -> viewLogs());
         }
 
         // Add glue at the end to push items to top
@@ -277,8 +279,58 @@ public class DashboardFrame extends JFrame {
     private void logout() {
         int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?", "Confirm", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
+            // Log logout action
+            LoggerUtil.logLogout(currentUser.getEmail(), currentUser.getRole());
             dispose();
             new LoginFrame();
         }
+    }
+    private void viewLogs() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel titleLabel = new JLabel("System Logs");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        JTextArea logArea = new JTextArea();
+        logArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        logArea.setEditable(false);
+
+        // Load log file content
+        try {
+            File logFile = new File("logs/app.log");
+            if (logFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(logFile));
+                String line;
+                StringBuilder content = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    content.append(line).append("\n");
+                }
+                reader.close();
+                logArea.setText(content.toString());
+            } else {
+                logArea.setText("No logs available yet.");
+            }
+        } catch (IOException e) {
+            logArea.setText("Failed to load logs: " + e.getMessage());
+            LoggerUtil.logError("View Logs", "Failed to read log file: " + e.getMessage());
+        }
+
+        JScrollPane scrollPane = new JScrollPane(logArea);
+        scrollPane.setPreferredSize(new Dimension(600, 400));
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Refresh button
+        JPanel buttonPanel = new JPanel();
+        JButton refreshBtn = UIHelper.createButton("Refresh", UIHelper.PRIMARY_COLOR);
+        refreshBtn.addActionListener(e -> viewLogs()); // Refresh by calling again
+        buttonPanel.add(refreshBtn);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+
+        setContent(panel);
     }
 }

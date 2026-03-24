@@ -248,6 +248,10 @@ public class RegisterFrame extends JFrame {
         users.add(newUser);
         FileUtil.saveUsers(users);
 
+        // Log successful registration
+        LoggerUtil.logRegistration(email, role);
+        LoggerUtil.logCreate("User", email + " (" + role + ")");
+
         JOptionPane.showMessageDialog(this, "Registration successful! Please login.", "Success", JOptionPane.INFORMATION_MESSAGE);
         dispose();
         new LoginFrame();
