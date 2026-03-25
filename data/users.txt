@@ -1,0 +1,5 @@
+admin@bupt.edu,admin123,Admin,System Administrator
+1111@bupt.edu,11111111,TA,11
+2222@bupt.edu,22222222,TA,22
+3333@bupt.edu,33333333,MO,33
+5555@bupt.cn,55555555,TA,55

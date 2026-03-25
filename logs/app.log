@@ -1,0 +1,102 @@
+2026-03-25 18:09:46 [INFO] Users file does not exist, starting with empty list
+2026-03-25 18:09:46 [INFO] Created data directory: data/
+2026-03-25 18:09:46 [INFO] Users saved successfully. Total: 1
+2026-03-25 18:10:19 [INFO] Users loaded successfully. Total: 1
+2026-03-25 18:10:27 [LOGOUT] User logged out: admin@bupt.edu (Admin)
+2026-03-25 18:10:27 [INFO] Users loaded successfully. Total: 1
+2026-03-25 18:10:58 [INFO] Users saved successfully. Total: 2
+2026-03-25 18:10:58 [REGISTER] New user registered: 1111@bupt.edu (TA)
+2026-03-25 18:10:58 [CREATE] User created: 1111@bupt.edu (TA)
+2026-03-25 18:10:59 [INFO] Users loaded successfully. Total: 2
+2026-03-25 18:11:28 [INFO] Users saved successfully. Total: 3
+2026-03-25 18:11:28 [REGISTER] New user registered: 2222@bupt.edu (TA)
+2026-03-25 18:11:28 [CREATE] User created: 2222@bupt.edu (TA)
+2026-03-25 18:11:29 [INFO] Users loaded successfully. Total: 3
+2026-03-25 18:11:56 [INFO] Users loaded successfully. Total: 3
+2026-03-25 18:12:40 [INFO] Users loaded successfully. Total: 3
+2026-03-25 18:12:44 [INFO] Users loaded successfully. Total: 3
+2026-03-25 18:12:55 [INFO] Users loaded successfully. Total: 3
+2026-03-25 18:21:49 [INFO] Users loaded successfully. Total: 3
+2026-03-25 18:39:07 [INFO] Users loaded successfully. Total: 3
+2026-03-25 18:39:37 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:24:23 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:27:16 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:31:06 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:31:25 [ERROR] Login Failed - Invalid credentials for email: admin@bupt.edu
+2026-03-25 20:31:48 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:34:17 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:34:18 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:34:28 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:34:31 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:34:47 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:35:12 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:38:07 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:38:31 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:42:17 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:46:54 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:50:05 [LOGOUT] User logged out: admin@bupt.edu (Admin)
+2026-03-25 20:50:05 [INFO] Users loaded successfully. Total: 3
+2026-03-25 20:51:00 [INFO] Users saved successfully. Total: 4
+2026-03-25 20:51:00 [REGISTER] New user registered: 3333@bupt.edu (MO)
+2026-03-25 20:51:00 [CREATE] User created: 3333@bupt.edu (MO)
+2026-03-25 20:51:01 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:51:41 [LOGOUT] User logged out: 3333@bupt.edu (MO)
+2026-03-25 20:51:41 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:53:24 [CREATE] Profile created: 1111@bupt.edu
+2026-03-25 20:53:48 [LOGOUT] User logged out: 1111@bupt.edu (TA)
+2026-03-25 20:53:48 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:55:09 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:55:42 [LOGOUT] User logged out: admin@bupt.edu (Admin)
+2026-03-25 20:55:42 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:56:46 [CREATE] Job created: JOB1774443406543 - 11 (Limit: 6)
+2026-03-25 20:56:56 [LOGOUT] User logged out: 3333@bupt.edu (MO)
+2026-03-25 20:56:56 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:57:31 [INFO] TA 1111@bupt.edu applied for job: JOB1774443406543
+2026-03-25 20:57:42 [LOGOUT] User logged out: 1111@bupt.edu (TA)
+2026-03-25 20:57:42 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:58:06 [LOGOUT] User logged out: 1111@bupt.edu (TA)
+2026-03-25 20:58:06 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:58:21 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:58:24 [UPDATE] Application updated: APP1774443448229 -> ACCEPTED
+2026-03-25 20:58:26 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:58:30 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:58:32 [LOGOUT] User logged out: 3333@bupt.edu (MO)
+2026-03-25 20:58:32 [INFO] Users loaded successfully. Total: 4
+2026-03-25 20:59:06 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:12:30 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:12:31 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:12:33 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:16:35 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:16:44 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:20:18 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:20:34 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:20:37 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:20:39 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:20:42 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:20:45 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:20:54 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:26:14 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:26:26 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:26:40 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:37:45 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:03 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:09 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:15 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:19 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:22 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:26 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:28 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:29 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:38:51 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:39:02 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:39:21 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:39:23 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:49:41 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:54:39 [LOGOUT] User logged out: admin@bupt.edu (Admin)
+2026-03-25 21:54:39 [INFO] Users loaded successfully. Total: 4
+2026-03-25 21:56:09 [ERROR] Login Failed - Invalid credentials for email: 953934382@qq.com
+2026-03-25 22:17:00 [INFO] Users loaded successfully. Total: 4
+2026-03-25 22:17:42 [INFO] Users saved successfully. Total: 5
+2026-03-25 22:17:42 [REGISTER] New user registered: 5555@bupt.cn (TA)
+2026-03-25 22:17:42 [CREATE] User created: 5555@bupt.cn (TA)
+2026-03-25 22:17:44 [INFO] Users loaded successfully. Total: 5
