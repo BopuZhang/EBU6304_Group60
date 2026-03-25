@@ -2210,34 +2210,279 @@ public class DashboardFrame extends JFrame {
 
     private void viewAllTAs() {
         JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setLayout(new BorderLayout());
         panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
+        // ========== 顶部区域 ==========
+        JPanel northArea = new JPanel();
+        northArea.setLayout(new BoxLayout(northArea, BoxLayout.Y_AXIS));
+        northArea.setBackground(Color.WHITE);
+
+        // 标题
         JLabel titleLabel = new JLabel("All Teaching Assistants");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(titleLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 15)));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        northArea.add(titleLabel);
+        northArea.add(Box.createRigidArea(new Dimension(0, 12)));
 
+        // 筛选栏 - 使用 GridBagLayout 实现自动换行
+        JPanel filterPanel = new JPanel(new GridBagLayout());
+        filterPanel.setBackground(new Color(250, 250, 250));
+        filterPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 1, 0, new Color(230, 230, 230)),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(3, 5, 3, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        // 搜索
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        filterPanel.add(new JLabel("Search:"), gbc);
+
+        gbc.gridx = 1;
+        JTextField searchField = new JTextField(12);
+        searchField.setPreferredSize(new Dimension(120, 28));
+        filterPanel.add(searchField, gbc);
+
+        // 专业筛选
+        gbc.gridx = 2;
+        filterPanel.add(new JLabel("Major:"), gbc);
+
+        gbc.gridx = 3;
+        JComboBox<String> majorFilter = new JComboBox<>();
+        majorFilter.addItem("All");
+        majorFilter.addItem("Computer Science");
+        majorFilter.addItem("Software Engineering");
+        majorFilter.addItem("Information Technology");
+        majorFilter.addItem("Data Science");
+        majorFilter.addItem("Artificial Intelligence");
+        majorFilter.addItem("Other");
+        majorFilter.setPreferredSize(new Dimension(130, 28));
+        filterPanel.add(majorFilter, gbc);
+
+        // 年级筛选
+        gbc.gridx = 4;
+        filterPanel.add(new JLabel("Grade:"), gbc);
+
+        gbc.gridx = 5;
+        JComboBox<String> gradeFilter = new JComboBox<>();
+        gradeFilter.addItem("All");
+        gradeFilter.addItem("1st Year");
+        gradeFilter.addItem("2nd Year");
+        gradeFilter.addItem("3rd Year");
+        gradeFilter.addItem("4th Year");
+        gradeFilter.addItem("Graduate");
+        gradeFilter.setPreferredSize(new Dimension(100, 28));
+        filterPanel.add(gradeFilter, gbc);
+
+        // 按钮 - 放在下一行
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        JButton searchBtn = new JButton("Search");
+        searchBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        searchBtn.setBackground(UIHelper.PRIMARY_COLOR);
+        searchBtn.setForeground(Color.BLACK);
+        searchBtn.setFocusPainted(false);
+        searchBtn.setPreferredSize(new Dimension(70, 28));
+        filterPanel.add(searchBtn, gbc);
+
+        gbc.gridx = 2;
+        gbc.gridwidth = 2;
+        JButton resetBtn = new JButton("Reset");
+        resetBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        resetBtn.setBackground(new Color(150, 150, 150));
+        resetBtn.setForeground(Color.BLACK);
+        resetBtn.setFocusPainted(false);
+        resetBtn.setPreferredSize(new Dimension(70, 28));
+        filterPanel.add(resetBtn, gbc);
+
+        northArea.add(filterPanel);
+        northArea.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        panel.add(northArea, BorderLayout.NORTH);
+
+        // ========== 表格区域 ==========
+        // 加载数据
+        List<Profile> allProfiles = FileUtil.loadProfiles();
+        Map<String, Profile> profileMap = new HashMap<>();
+        for (Profile p : allProfiles) {
+            profileMap.put(p.getEmail(), p);
+        }
+
+        List<User> taUsers = new ArrayList<>();
         for (User user : users) {
             if (user.getRole().equals("TA")) {
-                addInfoRow(panel, user.getName(), user.getEmail());
+                taUsers.add(user);
             }
         }
 
-        if (getTACount() == 0) {
-            JLabel emptyLabel = new JLabel("No TA registered yet");
-            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
-            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            panel.add(emptyLabel);
-        }
+        // 创建表格面板
+        JPanel tablePanel = new JPanel();
+        tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
+        tablePanel.setBackground(Color.WHITE);
+
+        // 表头
+        JPanel headerPanel = new JPanel(new GridLayout(1, 5, 5, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+
+        JLabel nameHeader = new JLabel("Name");
+        nameHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        nameHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(nameHeader);
+
+        JLabel idHeader = new JLabel("Student ID");
+        idHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        idHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(idHeader);
+
+        JLabel majorHeader = new JLabel("Major");
+        majorHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        majorHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(majorHeader);
+
+        JLabel gradeHeader = new JLabel("Grade");
+        gradeHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        gradeHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(gradeHeader);
+
+        JLabel actionHeader = new JLabel("Action");
+        actionHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        actionHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(actionHeader);
+
+        tablePanel.add(headerPanel);
+
+        // 刷新表格的方法
+        Runnable refreshTable = () -> {
+            tablePanel.removeAll();
+            tablePanel.add(headerPanel);
+
+            String searchText = searchField.getText().trim().toLowerCase();
+            String selectedMajor = (String) majorFilter.getSelectedItem();
+            String selectedGrade = (String) gradeFilter.getSelectedItem();
+
+            List<User> filtered = new ArrayList<>();
+            for (User user : taUsers) {
+                Profile p = profileMap.get(user.getEmail());
+
+                if (!searchText.isEmpty() && !user.getName().toLowerCase().contains(searchText)
+                        && !user.getEmail().toLowerCase().contains(searchText)) {
+                    continue;
+                }
+
+                if (!selectedMajor.equals("All") && (p == null || !selectedMajor.equals(p.getMajor()))) {
+                    continue;
+                }
+
+                if (!selectedGrade.equals("All") && (p == null || !selectedGrade.equals(p.getGrade()))) {
+                    continue;
+                }
+
+                filtered.add(user);
+            }
+
+            if (filtered.isEmpty()) {
+                JLabel empty = new JLabel("No TAs found");
+                empty.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                empty.setForeground(new Color(150, 150, 150));
+                empty.setAlignmentX(Component.CENTER_ALIGNMENT);
+                tablePanel.add(empty);
+            } else {
+                for (User user : filtered) {
+                    Profile p = profileMap.get(user.getEmail());
+
+                    JPanel row = new JPanel(new GridLayout(1, 5, 5, 0));
+                    row.setBackground(Color.WHITE);
+                    row.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+                    row.setPreferredSize(new Dimension(0, 38));
+                    row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+
+                    JLabel nameLabel = new JLabel(user.getName());
+                    nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    row.add(nameLabel);
+
+                    String sid = (p != null && p.getStudentId() != null) ? p.getStudentId() : "-";
+                    JLabel idLabel = new JLabel(sid);
+                    idLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    row.add(idLabel);
+
+                    String major = (p != null && p.getMajor() != null) ? p.getMajor() : "-";
+                    JLabel majorLabel = new JLabel(major);
+                    majorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    row.add(majorLabel);
+
+                    String grade = (p != null && p.getGrade() != null) ? p.getGrade() : "-";
+                    JLabel gradeLabel = new JLabel(grade);
+                    gradeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    row.add(gradeLabel);
+
+                    JButton viewBtn = new JButton("Details");
+                    viewBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                    viewBtn.setBackground(new Color(79, 114, 139));
+                    viewBtn.setForeground(Color.WHITE);
+                    viewBtn.setFocusPainted(false);
+                    viewBtn.setBorderPainted(false);
+                    viewBtn.setPreferredSize(new Dimension(60, 26));
+
+                    final User finalUser = user;
+                    final Profile finalProfile = p;
+                    viewBtn.addActionListener(e -> {
+                        if (finalProfile != null) {
+                            viewTaProfile(finalProfile, finalUser);
+                        } else {
+                            JOptionPane.showMessageDialog(this, "No profile data available");
+                        }
+                    });
+
+                    JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+                    btnPanel.setBackground(Color.WHITE);
+                    btnPanel.add(viewBtn);
+                    row.add(btnPanel);
+
+                    tablePanel.add(row);
+                }
+            }
+
+            tablePanel.revalidate();
+            tablePanel.repaint();
+        };
+
+        searchBtn.addActionListener(e -> refreshTable.run());
+        resetBtn.addActionListener(e -> {
+            searchField.setText("");
+            majorFilter.setSelectedIndex(0);
+            gradeFilter.setSelectedIndex(0);
+            refreshTable.run();
+        });
+
+        refreshTable.run();
+
+        JScrollPane scrollPane = new JScrollPane(tablePanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // 底部统计
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        bottomPanel.setBackground(new Color(250, 250, 250));
+        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
+        bottomPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        JLabel countLabel = new JLabel("Total: " + taUsers.size() + " TAs");
+        countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        countLabel.setForeground(new Color(100, 100, 100));
+        bottomPanel.add(countLabel);
+        panel.add(bottomPanel, BorderLayout.SOUTH);
 
         setContent(panel);
     }
-
     private void viewWorkload() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
