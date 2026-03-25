@@ -94,4 +94,10 @@ public class LoggerUtil {
     private static String getTimestamp() {
         return LocalDateTime.now().format(formatter);
     }
+    /**
+     * Log delete operation
+     */
+    public static void logDelete(String entityType, String details) {
+        log("DELETE", entityType + " deleted: " + details);
+    }
 }

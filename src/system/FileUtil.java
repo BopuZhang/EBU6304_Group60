@@ -65,4 +65,125 @@ public class FileUtil {
         }
         return users;
     }
+
+    // ========== Job Operations ==========
+    public static List<Job> loadJobs() {
+        List<Job> jobs = new ArrayList<>();
+        File file = new File(DATA_DIR + "jobs.txt");
+        if (!file.exists()) return jobs;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                Job job = Job.fromString(line);
+                if (job != null) jobs.add(job);
+            }
+        } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to load jobs: " + e.getMessage());
+        }
+        return jobs;
+    }
+
+    public static void saveJobs(List<Job> jobs) {
+        try {
+            File dir = new File(DATA_DIR);
+            if (!dir.exists()) dir.mkdirs();
+
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "jobs.txt"))) {
+                for (Job job : jobs) {
+                    writer.write(job.toString());
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to save jobs: " + e.getMessage());
+        }
+    }
+
+    // ========== Application Operations ==========
+    public static List<Application> loadApplications() {
+        List<Application> apps = new ArrayList<>();
+        File file = new File(DATA_DIR + "applications.txt");
+        if (!file.exists()) return apps;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                Application app = Application.fromString(line);
+                if (app != null) apps.add(app);
+            }
+        } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to load applications: " + e.getMessage());
+        }
+        return apps;
+    }
+
+    public static void saveApplications(List<Application> apps) {
+        try {
+            File dir = new File(DATA_DIR);
+            if (!dir.exists()) dir.mkdirs();
+
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "applications.txt"))) {
+                for (Application app : apps) {
+                    writer.write(app.toString());
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to save applications: " + e.getMessage());
+        }
+    }
+    // ========== Profile Operations ==========
+    public static List<Profile> loadProfiles() {
+        List<Profile> profiles = new ArrayList<>();
+        File file = new File(DATA_DIR + "profiles.txt");
+        if (!file.exists()) return profiles;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                Profile profile = Profile.fromString(line);
+                if (profile != null) profiles.add(profile);
+            }
+        } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to load profiles: " + e.getMessage());
+        }
+        return profiles;
+    }
+
+    public static void saveProfiles(List<Profile> profiles) {
+        try {
+            File dir = new File(DATA_DIR);
+            if (!dir.exists()) dir.mkdirs();
+
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "profiles.txt"))) {
+                for (Profile profile : profiles) {
+                    writer.write(profile.toString());
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to save profiles: " + e.getMessage());
+        }
+    }
+
+    public static Profile getProfileByEmail(String email) {
+        List<Profile> profiles = loadProfiles();
+        System.out.println("=== getProfileByEmail ===");
+        System.out.println("Looking for email: " + email);
+        System.out.println("Total profiles: " + profiles.size());
+
+        for (Profile profile : profiles) {
+            System.out.println("Checking profile email: " + profile.getEmail());
+            if (profile.getEmail().equalsIgnoreCase(email)) {
+                System.out.println("Found match!");
+                return profile;
+            }
+        }
+        System.out.println("No match found");
+        return null;
+    }
 }

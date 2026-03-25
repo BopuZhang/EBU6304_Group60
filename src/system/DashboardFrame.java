@@ -1,11 +1,17 @@
 package system;
 
 import javax.swing.*;
+import javax.swing.table.AbstractTableModel;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.List;
 import java.io.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.awt.Desktop;
+import java.io.File;
+import java.io.IOException;
+import javax.swing.JFileChooser;
 
 public class DashboardFrame extends JFrame {
     private User currentUser;
@@ -57,17 +63,16 @@ public class DashboardFrame extends JFrame {
 
         // Add menu items based on role
         if (currentUser.getRole().equals("TA")) {
+            addMenuItem(menuPanel, "My Profile", e -> viewProfile());
             addMenuItem(menuPanel, "Create Personal Profile", e -> createProfile());
             addMenuItem(menuPanel, "Edit Personal Profile", e -> editProfile());
             addMenuItem(menuPanel, "Upload CV", e -> uploadCV());
-            addMenuItem(menuPanel, "View Available Positions", e -> viewJobs()); // TA-05
-            addMenuItem(menuPanel, "Apply for Position", e -> applyForJob()); // TA-06 新增菜单
-            addMenuItem(menuPanel, "Check Application Status", e -> viewApplications()); // TA-07
+            addMenuItem(menuPanel, "View Available Positions", e -> viewJobs());  // 这里包含申请功能
+            addMenuItem(menuPanel, "Check Application Status", e -> viewApplications());
         } else if (currentUser.getRole().equals("MO")) {
             addMenuItem(menuPanel, "Post Position", e -> postJob());
             addMenuItem(menuPanel, "View Positions I've Posted", e -> viewMyJobs());
             addMenuItem(menuPanel, "View Applicants", e -> viewApplicants());
-            addMenuItem(menuPanel, "Edit Posted Position", e -> editPostedPosition());
         } else { // Admin
             addMenuItem(menuPanel, "View All Teaching Assistants", e -> viewAllTAs());
             addMenuItem(menuPanel, "View TA Workload", e -> viewWorkload());
@@ -76,9 +81,7 @@ public class DashboardFrame extends JFrame {
             addMenuItem(menuPanel, "View System Logs", e -> viewLogs());
         }
 
-        // Add glue at the end to push items to top
         menuPanel.add(Box.createVerticalGlue());
-
         add(menuPanel, BorderLayout.WEST);
 
         // Right content panel
@@ -108,7 +111,6 @@ public class DashboardFrame extends JFrame {
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.addActionListener(action);
 
-        // Hover effect
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 button.setBackground(new Color(240, 240, 240));
@@ -175,14 +177,266 @@ public class DashboardFrame extends JFrame {
         return count;
     }
 
+    /**
+     * Check if TA has already applied for a job
+     */
+    private boolean hasApplied(String jobId) {
+        List<Application> apps = FileUtil.loadApplications();
+        for (Application app : apps) {
+            if (app.getTaEmail().equals(currentUser.getEmail()) && app.getJobId().equals(jobId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Submit application for a job
+     */
+    private void submitApplication(String jobId) {
+        // Check if already applied
+        if (hasApplied(jobId)) {
+            JOptionPane.showMessageDialog(this, "You have already applied for this position!", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Get job details
+        List<Job> jobs = FileUtil.loadJobs();
+        Job targetJob = null;
+        for (Job job : jobs) {
+            if (job.getJobId().equals(jobId)) {
+                targetJob = job;
+                break;
+            }
+        }
+
+        if (targetJob == null) {
+            JOptionPane.showMessageDialog(this, "Position not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Check if position is still open
+        if (!"OPEN".equals(targetJob.getStatus())) {
+            JOptionPane.showMessageDialog(this, "This position is no longer accepting applications.", "Closed", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Check current accepted count
+        List<Application> allApps = FileUtil.loadApplications();
+        int acceptedCount = 0;
+        for (Application app : allApps) {
+            if (app.getJobId().equals(jobId) && "ACCEPTED".equals(app.getStatus())) {
+                acceptedCount++;
+            }
+        }
+
+        // Check if position is already full
+        if (acceptedCount >= targetJob.getApplicantLimit()) {
+            JOptionPane.showMessageDialog(this,
+                    "This position has reached its applicant limit (" + targetJob.getApplicantLimit() + ").\n" +
+                            "No more applications are being accepted.",
+                    "Position Full", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Create new application
+        String applicationId = "APP" + System.currentTimeMillis();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String applyTime = sdf.format(new Date());
+
+        Application newApp = new Application(applicationId, applyTime, currentUser.getEmail(), jobId, "PENDING");
+
+        List<Application> apps = FileUtil.loadApplications();
+        apps.add(newApp);
+        FileUtil.saveApplications(apps);
+
+        // Check if after this application, the position becomes full
+        int newAcceptedCount = acceptedCount + 1;
+        if (newAcceptedCount >= targetJob.getApplicantLimit()) {
+            // Close the position automatically
+            List<Job> updatedJobs = FileUtil.loadJobs();
+            for (Job job : updatedJobs) {
+                if (job.getJobId().equals(jobId)) {
+                    job.setStatus("CLOSED");
+                    LoggerUtil.logInfo("Job " + jobId + " automatically closed after reaching applicant limit (" + newAcceptedCount + "/" + targetJob.getApplicantLimit() + ")");
+                    break;
+                }
+            }
+            FileUtil.saveJobs(updatedJobs);
+            JOptionPane.showMessageDialog(this,
+                    "Application submitted successfully!\n\n" +
+                            "Note: This position has now reached its applicant limit and has been closed.",
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Application submitted successfully!\n" +
+                            "Applicants: " + newAcceptedCount + " / " + targetJob.getApplicantLimit(),
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+        }
+
+        LoggerUtil.logInfo("TA " + currentUser.getEmail() + " applied for job: " + jobId);
+
+        // Refresh the job list
+        viewJobs();
+    }
+
     // ========== TA Functions ==========
 
     private void createProfile() {
-        showPlaceholder("Create Personal Profile");
-    }
+        // Check if profile already exists
+        Profile existingProfile = FileUtil.getProfileByEmail(currentUser.getEmail());
+        if (existingProfile != null) {
+            JOptionPane.showMessageDialog(this,
+                    "You already have a profile. Use 'Edit Personal Profile' to update it.",
+                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            viewProfile();
+            return;
+        }
 
-    private void editProfile() {
-        showPlaceholder("Edit Personal Profile");
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title
+        JLabel titleLabel = new JLabel("Create Personal Profile");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Form fields
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new GridBagLayout());
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        int row = 0;
+
+        // Student ID (required, 9 digits)
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Student ID (9 digits):"), gbc);
+
+        JTextField studentIdField = new JTextField(20);
+        studentIdField.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(studentIdField, gbc);
+        row++;
+
+        // Major
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Major:"), gbc);
+
+        JComboBox<String> majorCombo = new JComboBox<>(new String[]{
+                "Computer Science", "Software Engineering", "Information Technology",
+                "Data Science", "Artificial Intelligence", "Other"
+        });
+        majorCombo.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(majorCombo, gbc);
+        row++;
+
+        // Grade/Year
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Grade/Year:"), gbc);
+
+        JComboBox<String> gradeCombo = new JComboBox<>(new String[]{
+                "1st Year", "2nd Year", "3rd Year", "4th Year", "Graduate"
+        });
+        gradeCombo.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(gradeCombo, gbc);
+        row++;
+
+        // Phone
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Phone Number:"), gbc);
+
+        JTextField phoneField = new JTextField(20);
+        phoneField.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(phoneField, gbc);
+        row++;
+
+        // Description (新增个人描述)
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Personal Description:"), gbc);
+
+        JTextArea descArea = new JTextArea(3, 20);
+        descArea.setLineWrap(true);
+        descArea.setWrapStyleWord(true);
+        JScrollPane descScroll = new JScrollPane(descArea);
+        descScroll.setPreferredSize(new Dimension(250, 60));
+        gbc.gridx = 1;
+        formPanel.add(descScroll, gbc);
+        row++;
+
+        panel.add(formPanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Buttons
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton saveBtn = UIHelper.createButton("Save Profile", UIHelper.SUCCESS_COLOR);
+        JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
+
+        saveBtn.addActionListener(e -> {
+            String studentId = studentIdField.getText().trim();
+            String major = (String) majorCombo.getSelectedItem();
+            String grade = (String) gradeCombo.getSelectedItem();
+            String phone = phoneField.getText().trim();
+            String description = descArea.getText().trim();
+
+            // Validation
+            if (studentId.isEmpty() || phone.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please fill in all required fields", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Validate student ID (9 digits)
+            if (!studentId.matches("\\d{9}")) {
+                JOptionPane.showMessageDialog(this, "Student ID must be exactly 9 digits", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Create profile
+            Profile newProfile = new Profile(currentUser.getEmail(), studentId, major, grade, phone, "", description);
+
+            List<Profile> profiles = FileUtil.loadProfiles();
+            profiles.add(newProfile);
+            FileUtil.saveProfiles(profiles);
+
+            LoggerUtil.logCreate("Profile", currentUser.getEmail());
+
+            JOptionPane.showMessageDialog(this, "Profile created successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+            // Show the created profile
+            viewProfile();
+        });
+
+        cancelBtn.addActionListener(e -> {
+            viewProfile();
+        });
+
+        buttonPanel.add(saveBtn);
+        buttonPanel.add(cancelBtn);
+        panel.add(buttonPanel);
+
+        setContent(panel);
     }
 
     private void viewProfile() {
@@ -198,18 +452,387 @@ public class DashboardFrame extends JFrame {
         panel.add(titleLabel);
         panel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        addInfoRow(panel, "Email:", currentUser.getEmail());
-        addInfoRow(panel, "Name:", currentUser.getName());
-        addInfoRow(panel, "Role:", currentUser.getRole());
+        // Basic user info
+        JPanel userInfoPanel = new JPanel();
+        userInfoPanel.setLayout(new BoxLayout(userInfoPanel, BoxLayout.Y_AXIS));
+        userInfoPanel.setBackground(Color.WHITE);
+        userInfoPanel.setBorder(BorderFactory.createTitledBorder("Account Information"));
+        userInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        userInfoPanel.setMaximumSize(new Dimension(500, 120));
+
+        addInfoRow(userInfoPanel, "Name:", currentUser.getName());
+        addInfoRow(userInfoPanel, "Email:", currentUser.getEmail());
+        addInfoRow(userInfoPanel, "Role:", currentUser.getRole());
+
+        panel.add(userInfoPanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Profile info
+        Profile profile = FileUtil.getProfileByEmail(currentUser.getEmail());
+
+        JPanel profilePanel = new JPanel();
+        profilePanel.setLayout(new BoxLayout(profilePanel, BoxLayout.Y_AXIS));
+        profilePanel.setBackground(Color.WHITE);
+        profilePanel.setBorder(BorderFactory.createTitledBorder("Personal Information"));
+        profilePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        profilePanel.setMaximumSize(new Dimension(500, 350));
+
+        if (profile == null) {
+            JLabel noProfileLabel = new JLabel("No profile created yet. Click 'Create Personal Profile' to set up your profile.");
+            noProfileLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            noProfileLabel.setForeground(new Color(150, 150, 150));
+            profilePanel.add(noProfileLabel);
+        } else {
+            addInfoRow(profilePanel, "Student ID:", profile.getStudentId());
+            addInfoRow(profilePanel, "Major:", profile.getMajor());
+            addInfoRow(profilePanel, "Grade:", profile.getGrade());
+            addInfoRow(profilePanel, "Phone:", profile.getPhone());
+            if (profile.getDescription() != null && !profile.getDescription().isEmpty()) {
+                addInfoRow(profilePanel, "Description:", profile.getDescription());
+            }
+
+            // CV section with View button
+            if (profile.getCvPath() != null && !profile.getCvPath().isEmpty()) {
+                addInfoRow(profilePanel, "CV:", profile.getCvPath());
+
+                JPanel cvButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                cvButtonPanel.setBackground(Color.WHITE);
+                cvButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+                JButton viewCvBtn = UIHelper.createButton("View CV", UIHelper.PRIMARY_COLOR);
+                viewCvBtn.setMaximumSize(new Dimension(120, 30));
+                viewCvBtn.addActionListener(e -> viewCvFile(profile.getCvPath()));
+                cvButtonPanel.add(viewCvBtn);
+
+                profilePanel.add(cvButtonPanel);
+            } else {
+                addInfoRow(profilePanel, "CV:", "Not uploaded yet");
+            }
+        }
+
+        panel.add(profilePanel);
+
+        setContent(panel);
+    }
+
+    private void editProfile() {
+        // Check if profile exists
+        Profile profile = FileUtil.getProfileByEmail(currentUser.getEmail());
+        if (profile == null) {
+            JOptionPane.showMessageDialog(this,
+                    "You don't have a profile yet. Please create one first.",
+                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            createProfile();
+            return;
+        }
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title
+        JLabel titleLabel = new JLabel("Edit Personal Profile");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Form fields
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new GridBagLayout());
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        int row = 0;
+
+        // Student ID (read-only)
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Student ID:"), gbc);
+
+        JLabel studentIdLabel = new JLabel(profile.getStudentId());
+        studentIdLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        studentIdLabel.setForeground(new Color(100, 100, 100));
+        gbc.gridx = 1;
+        formPanel.add(studentIdLabel, gbc);
+        row++;
+
+        // Major
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Major:"), gbc);
+
+        JComboBox<String> majorCombo = new JComboBox<>(new String[]{
+                "Computer Science", "Software Engineering", "Information Technology",
+                "Data Science", "Artificial Intelligence", "Other"
+        });
+        majorCombo.setSelectedItem(profile.getMajor());
+        majorCombo.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(majorCombo, gbc);
+        row++;
+
+        // Grade/Year
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Grade/Year:"), gbc);
+
+        JComboBox<String> gradeCombo = new JComboBox<>(new String[]{
+                "1st Year", "2nd Year", "3rd Year", "4th Year", "Graduate"
+        });
+        gradeCombo.setSelectedItem(profile.getGrade());
+        gradeCombo.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(gradeCombo, gbc);
+        row++;
+
+        // Phone
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Phone Number:"), gbc);
+
+        JTextField phoneField = new JTextField(profile.getPhone(), 20);
+        phoneField.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(phoneField, gbc);
+        row++;
+
+        // Description
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Personal Description:"), gbc);
+
+        JTextArea descArea = new JTextArea(3, 20);
+        descArea.setText(profile.getDescription() != null ? profile.getDescription() : "");
+        descArea.setLineWrap(true);
+        descArea.setWrapStyleWord(true);
+        JScrollPane descScroll = new JScrollPane(descArea);
+        descScroll.setPreferredSize(new Dimension(250, 60));
+        gbc.gridx = 1;
+        formPanel.add(descScroll, gbc);
+        row++;
+
+        panel.add(formPanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Buttons
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton saveBtn = UIHelper.createButton("Save Changes", UIHelper.SUCCESS_COLOR);
+        JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
+
+        saveBtn.addActionListener(e -> {
+            String major = (String) majorCombo.getSelectedItem();
+            String grade = (String) gradeCombo.getSelectedItem();
+            String phone = phoneField.getText().trim();
+            String description = descArea.getText().trim();
+
+            if (phone.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Phone number cannot be empty", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Update profile
+            Profile updatedProfile = new Profile(
+                    profile.getEmail(),
+                    profile.getStudentId(),
+                    major,
+                    grade,
+                    phone,
+                    profile.getCvPath(),
+                    description
+            );
+
+            List<Profile> profiles = FileUtil.loadProfiles();
+            for (int i = 0; i < profiles.size(); i++) {
+                if (profiles.get(i).getEmail().equalsIgnoreCase(currentUser.getEmail())) {
+                    profiles.set(i, updatedProfile);
+                    break;
+                }
+            }
+            FileUtil.saveProfiles(profiles);
+
+            LoggerUtil.logUpdate("Profile", currentUser.getEmail());
+
+            JOptionPane.showMessageDialog(this, "Profile updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+            // Refresh view
+            viewProfile();
+        });
+
+        cancelBtn.addActionListener(e -> {
+            viewProfile();
+        });
+
+        buttonPanel.add(saveBtn);
+        buttonPanel.add(cancelBtn);
+        panel.add(buttonPanel);
 
         setContent(panel);
     }
 
     private void uploadCV() {
-        showPlaceholder("Upload CV");
+        // Check if profile exists
+        Profile profile = FileUtil.getProfileByEmail(currentUser.getEmail());
+        if (profile == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please create your personal profile first before uploading CV.",
+                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            createProfile();
+            return;
+        }
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title
+        JLabel titleLabel = new JLabel("Upload CV");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Info panel
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(new Color(245, 245, 245));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        infoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        infoPanel.setMaximumSize(new Dimension(500, 100));
+
+        JLabel infoLabel = new JLabel("Upload your CV in PDF format (max 5MB)");
+        infoLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        infoLabel.setForeground(new Color(100, 100, 100));
+        infoPanel.add(infoLabel);
+
+        if (profile.getCvPath() != null && !profile.getCvPath().isEmpty()) {
+            JLabel currentLabel = new JLabel("Current CV: " + profile.getCvPath());
+            currentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            currentLabel.setForeground(new Color(76, 175, 80));
+            infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+            infoPanel.add(currentLabel);
+        }
+
+        panel.add(infoPanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // File selection
+        JPanel filePanel = new JPanel();
+        filePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        filePanel.setBackground(Color.WHITE);
+        filePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JTextField filePathField = new JTextField(30);
+        filePathField.setEditable(false);
+        filePathField.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+
+        JButton browseBtn = UIHelper.createButton("Browse", UIHelper.SECONDARY_COLOR);
+        browseBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                    "PDF Files (*.pdf)", "pdf"));
+            int result = fileChooser.showOpenDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File selectedFile = fileChooser.getSelectedFile();
+                // Check file size (max 5MB = 5 * 1024 * 1024 bytes)
+                if (selectedFile.length() > 5 * 1024 * 1024) {
+                    JOptionPane.showMessageDialog(this,
+                            "File size exceeds 5MB limit. Please select a smaller file.",
+                            "File Too Large", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                filePathField.setText(selectedFile.getAbsolutePath());
+            }
+        });
+
+        filePanel.add(filePathField);
+        filePanel.add(browseBtn);
+        panel.add(filePanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Upload button
+        JButton uploadBtn = UIHelper.createButton("Upload CV", UIHelper.SUCCESS_COLOR);
+        uploadBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        uploadBtn.setMaximumSize(new Dimension(150, 40));
+        uploadBtn.addActionListener(e -> {
+            String filePath = filePathField.getText().trim();
+            if (filePath.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please select a file first.", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Create CVs directory if not exists
+            File cvDir = new File("cvs");
+            if (!cvDir.exists()) {
+                cvDir.mkdirs();
+            }
+
+            try {
+                // Generate unique filename
+                String originalFileName = new File(filePath).getName();
+                String newFileName = currentUser.getEmail().replace("@", "_").replace(".", "_")
+                        + "_" + System.currentTimeMillis() + ".pdf";
+                String destPath = "cvs/" + newFileName;
+
+                // Copy file
+                File source = new File(filePath);
+                File dest = new File(destPath);
+                java.nio.file.Files.copy(source.toPath(), dest.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+                // Update profile with CV path
+                List<Profile> profiles = FileUtil.loadProfiles();
+                for (int i = 0; i < profiles.size(); i++) {
+                    if (profiles.get(i).getEmail().equals(currentUser.getEmail())) {
+                        Profile updatedProfile = new Profile(
+                                profiles.get(i).getEmail(),
+                                profiles.get(i).getStudentId(),
+                                profiles.get(i).getMajor(),
+                                profiles.get(i).getGrade(),
+                                profiles.get(i).getPhone(),
+                                destPath,
+                                profiles.get(i).getDescription()
+                        );
+                        profiles.set(i, updatedProfile);
+                        break;
+                    }
+                }
+                FileUtil.saveProfiles(profiles);
+
+                LoggerUtil.logUpdate("CV Upload", currentUser.getEmail() + " uploaded CV: " + destPath);
+                JOptionPane.showMessageDialog(this, "CV uploaded successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+                // Refresh view
+                viewProfile();
+
+            } catch (Exception ex) {
+                LoggerUtil.logError("CV Upload", ex.getMessage());
+                JOptionPane.showMessageDialog(this, "Failed to upload CV: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        panel.add(uploadBtn);
+
+        setContent(panel);
     }
 
-    // TA-05 查看可用岗位（优化版）
+    /**
+     * View Available Positions - 带申请按钮的职位列表
+     */
     private void viewJobs() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
@@ -221,225 +844,1370 @@ public class DashboardFrame extends JFrame {
         titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        JTextArea area = new JTextArea();
-        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        area.setEditable(false);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
+        List<Job> allJobs = FileUtil.loadJobs();
+        List<Job> availableJobs = new ArrayList<>();
+        List<Application> allApps = FileUtil.loadApplications();
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("===== AVAILABLE POSITIONS =====\n\n");
+        for (Job job : allJobs) {
+            if ("OPEN".equals(job.getStatus())) {
+                availableJobs.add(job);
+            }
+        }
 
-        try {
-            File jobFile = new File("data/jobs.txt");
-            // SYS-01 数据持久化：文件不存在则创建
-            if (!jobFile.exists()) {
-                jobFile.getParentFile().mkdirs(); // 创建data文件夹
-                jobFile.createNewFile();
-                sb.append("No positions available at this time.\n");
+        if (availableJobs.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No available positions at this time.", SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            panel.add(emptyLabel, BorderLayout.CENTER);
+            setContent(panel);
+            return;
+        }
+
+        availableJobs.sort((j1, j2) -> j1.getDeadline().compareTo(j2.getDeadline()));
+
+        // 创建一个新的 JPanel 作为表格容器，使用 BoxLayout
+        JPanel tablePanel = new JPanel();
+        tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
+        tablePanel.setBackground(Color.WHITE);
+
+        // Header
+        JPanel headerPanel = new JPanel(new GridLayout(1, 7, 5, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        headerPanel.add(createHeaderLabel("Module Code"));
+        headerPanel.add(createHeaderLabel("Module Name"));
+        headerPanel.add(createHeaderLabel("Weekly Hours"));
+        headerPanel.add(createHeaderLabel("Deadline"));
+        headerPanel.add(createHeaderLabel("Applicants"));
+        headerPanel.add(createHeaderLabel("Status"));
+        headerPanel.add(createHeaderLabel("Action"));
+        tablePanel.add(headerPanel);
+
+        for (Job job : availableJobs) {
+            int currentApplicants = (int) allApps.stream()
+                    .filter(app -> app.getJobId().equals(job.getJobId()) && "ACCEPTED".equals(app.getStatus()))
+                    .count();
+
+            boolean applied = hasApplied(job.getJobId());
+            boolean reachedLimit = currentApplicants >= job.getApplicantLimit();
+
+            JPanel rowPanel = new JPanel(new GridLayout(1, 7, 5, 0));
+            rowPanel.setBackground(Color.WHITE);
+            rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+            rowPanel.setPreferredSize(new Dimension(0, 50));
+
+            rowPanel.add(createCellLabel(job.getModuleCode()));
+            rowPanel.add(createCellLabel(job.getModuleName()));
+            rowPanel.add(createCellLabel(String.valueOf(job.getWeeklyHours())));
+            rowPanel.add(createCellLabel(job.getDeadline()));
+
+            JLabel applicantsLabel = createCellLabel(currentApplicants + " / " + job.getApplicantLimit());
+            applicantsLabel.setForeground(reachedLimit ? new Color(244, 67, 54) : new Color(76, 175, 80));
+            rowPanel.add(applicantsLabel);
+
+            JLabel statusLabel;
+            if (reachedLimit) {
+                statusLabel = createCellLabel("Full");
+                statusLabel.setForeground(new Color(244, 67, 54));
+            } else if (applied) {
+                statusLabel = createCellLabel("Applied");
+                statusLabel.setForeground(new Color(76, 175, 80));
             } else {
-                BufferedReader br = new BufferedReader(new FileReader(jobFile));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (line.trim().isEmpty()) continue;
-                    sb.append(line).append("\n");
-                }
-                br.close();
-                // 无岗位数据时提示
-                if (sb.toString().equals("===== AVAILABLE POSITIONS =====\n\n")) {
-                    sb.append("No positions available at this time.\n");
-                }
+                statusLabel = createCellLabel("Available");
+                statusLabel.setForeground(new Color(79, 114, 139));
             }
-            LoggerUtil.logInfo("TA " + currentUser.getEmail() + " viewed available positions"); // SYS-03 日志
-        } catch (Exception e) {
-            e.printStackTrace(); // SYS-02 错误处理
-            sb.append("Failed to load positions: ").append(e.getMessage()).append("\n");
-            LoggerUtil.logError("FILE_ERROR", "TA " + currentUser.getEmail() + " failed to load jobs: " + e.getMessage());
-        }
+            rowPanel.add(statusLabel);
 
-        area.setText(sb.toString());
-        JScrollPane sp = new JScrollPane(area);
-        sp.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-        panel.add(sp, BorderLayout.CENTER);
+            JButton applyBtn = new JButton("Apply");
+            applyBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            applyBtn.setBackground(new Color(76, 175, 80));
+            applyBtn.setForeground(Color.WHITE);
+            applyBtn.setFocusPainted(false);
+            applyBtn.setBorderPainted(false);
+            applyBtn.setOpaque(true);
+            applyBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        contentPanel.removeAll();
-        contentPanel.add(panel);
-        contentPanel.revalidate();
-        contentPanel.repaint();
-    }
-
-    // TA-06 申请岗位（新增核心方法）
-    private void applyForJob() {
-        // 1. 弹出输入框输入Job ID
-        String jobId = JOptionPane.showInputDialog(this,
-                "Enter Job ID to apply (e.g., J001):",
-                "Apply for Position",
-                JOptionPane.PLAIN_MESSAGE);
-
-        // 2. 校验输入
-        if (jobId == null || jobId.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Job ID cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        jobId = jobId.trim();
-
-        // 3. 校验岗位是否存在
-        boolean jobExists = false;
-        try {
-            File jobFile = new File("data/jobs.txt");
-            if (jobFile.exists()) {
-                BufferedReader br = new BufferedReader(new FileReader(jobFile));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (line.startsWith(jobId + ",")) {
-                        jobExists = true;
-                        break;
+            if (applied || reachedLimit) {
+                applyBtn.setEnabled(false);
+                applyBtn.setText(applied ? "Applied" : "Full");
+                applyBtn.setBackground(new Color(150, 150, 150));
+            } else {
+                final Job finalJob = job;
+                final int finalCurrentApplicants = currentApplicants;
+                applyBtn.addActionListener(e -> {
+                    int confirm = JOptionPane.showConfirmDialog(this,
+                            "Apply for " + finalJob.getModuleCode() + " - " + finalJob.getModuleName() + "?\n" +
+                                    "Current applicants: " + finalCurrentApplicants + " / " + finalJob.getApplicantLimit(),
+                            "Confirm Application",
+                            JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        submitApplication(finalJob.getJobId());
                     }
-                }
-                br.close();
+                });
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Failed to verify job ID!", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
+            rowPanel.add(applyBtn);
+            tablePanel.add(rowPanel);
         }
 
-        if (!jobExists) {
-            JOptionPane.showMessageDialog(this, "Job ID " + jobId + " does not exist!", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        // 关键：将 tablePanel 放入 JScrollPane，并设置滚动策略
+        JScrollPane scrollPane = new JScrollPane(tablePanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
-        // 4. 构建申请记录（格式：申请时间,申请人邮箱,Job ID,状态）
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String applyTime = sdf.format(new Date());
-        String applicationRecord = String.format("%s,%s,%s,pending",
-                applyTime,
-                currentUser.getEmail(),
-                jobId);
-
-        // 5. 写入applications.txt（追加模式）
-        try {
-            File appFile = new File("data/applications.txt");
-            appFile.getParentFile().mkdirs(); // 确保data文件夹存在
-            BufferedWriter bw = new BufferedWriter(new FileWriter(appFile, true));
-            bw.write(applicationRecord);
-            bw.newLine();
-            bw.close();
-
-            JOptionPane.showMessageDialog(this, "Application submitted successfully!\nJob ID: " + jobId, "Success", JOptionPane.INFORMATION_MESSAGE);
-            LoggerUtil.logInfo("TA " + currentUser.getEmail() + " applied for job: " + jobId); // SYS-03 日志
-        } catch (Exception e) {
-            e.printStackTrace(); // SYS-02 错误处理
-            JOptionPane.showMessageDialog(this, "Failed to submit application!", "Error", JOptionPane.ERROR_MESSAGE);
-            LoggerUtil.logError("APPLICATION_ERROR", "TA " + currentUser.getEmail() + " failed to apply for job " + jobId + ": " + e.getMessage());
-        }
-
-        // 6. 提交后自动跳转到申请状态页面（TA-07）
-        viewApplications();
+        panel.add(scrollPane, BorderLayout.CENTER);
+        setContent(panel);
     }
 
-    // TA-07 查看申请状态（优化版）
+    private JLabel createHeaderLabel(String text) {
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        label.setForeground(new Color(79, 114, 139));
+        return label;
+    }
+
+    private JLabel createCellLabel(String text) {
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        label.setForeground(Color.BLACK);
+        return label;
+    }
+
     private void viewApplications() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // 标题
         JLabel titleLabel = new JLabel("My Application Status");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        // 申请状态展示区域
-        JTextArea area = new JTextArea();
-        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        area.setEditable(false);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
+        // Load applications
+        List<Application> allApps = FileUtil.loadApplications();
+        List<Application> myApps = new ArrayList<>();
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("===== MY APPLICATION STATUS =====\n\n");
-        sb.append(String.format("%-20s %-15s %-12s\n", "Apply Time", "Job ID", "Status"));
-        sb.append("---------------------------------------------\n");
-
-        // 读取并筛选当前TA的申请
-        boolean hasApplication = false;
-        try {
-            File appFile = new File("data/applications.txt");
-            // SYS-01 数据持久化：文件不存在则创建
-            if (!appFile.exists()) {
-                appFile.getParentFile().mkdirs();
-                appFile.createNewFile();
-                sb.append("No applications submitted yet.\n");
-            } else {
-                BufferedReader br = new BufferedReader(new FileReader(appFile));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (line.trim().isEmpty()) continue;
-                    // 解析记录：申请时间,申请人邮箱,Job ID,状态
-                    String[] parts = line.split(",");
-                    if (parts.length != 4) continue; // 跳过格式错误的行（SYS-02）
-
-                    String applyTime = parts[0];
-                    String applicantEmail = parts[1];
-                    String jobId = parts[2];
-                    String status = parts[3];
-
-                    // 筛选当前TA的申请
-                    if (applicantEmail.equals(currentUser.getEmail())) {
-                        hasApplication = true;
-                        // 美化状态显示
-                        String statusDisplay = switch (status.toLowerCase()) {
-                            case "pending" -> "Pending ⏳";
-                            case "approved" -> "Approved ✅";
-                            case "rejected" -> "Rejected ❌";
-                            default -> "Unknown ❓";
-                        };
-                        sb.append(String.format("%-20s %-15s %-12s\n", applyTime, jobId, statusDisplay));
-                    }
-                }
-                br.close();
-                if (!hasApplication) {
-                    sb.append("No applications submitted yet.\n");
-                }
+        for (Application app : allApps) {
+            if (app.getTaEmail().equals(currentUser.getEmail())) {
+                myApps.add(app);
             }
-            LoggerUtil.logInfo("TA " + currentUser.getEmail() + " checked application status"); // SYS-03 日志
-        } catch (Exception e) {
-            e.printStackTrace(); // SYS-02 错误处理
-            sb.append("Failed to load application status: ").append(e.getMessage()).append("\n");
-            LoggerUtil.logError("APPLICATION_STATUS_ERROR", "TA " + currentUser.getEmail() + " failed to load application status: " + e.getMessage());
         }
 
-        area.setText(sb.toString());
-        JScrollPane sp = new JScrollPane(area);
-        sp.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-        panel.add(sp, BorderLayout.CENTER);
+        if (myApps.isEmpty()) {
+            JLabel emptyLabel = new JLabel("You haven't applied for any positions yet. Go to 'View Available Positions' to apply.", SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            panel.add(emptyLabel, BorderLayout.CENTER);
+            setContent(panel);
+            return;
+        }
 
-        contentPanel.removeAll();
-        contentPanel.add(panel);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+        // Sort by apply time (newest first)
+        myApps.sort((a1, a2) -> a2.getApplyTime().compareTo(a1.getApplyTime()));
+
+        // Get jobs for job details
+        List<Job> allJobs = FileUtil.loadJobs();
+
+        // Create table
+        JPanel tablePanel = new JPanel();
+        tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
+        tablePanel.setBackground(Color.WHITE);
+
+        // Header
+        JPanel headerPanel = new JPanel(new GridLayout(1, 5, 5, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerPanel.add(createHeaderLabel("Apply Date"));
+        headerPanel.add(createHeaderLabel("Position"));
+        headerPanel.add(createHeaderLabel("Module Code"));
+        headerPanel.add(createHeaderLabel("Weekly Hours"));
+        headerPanel.add(createHeaderLabel("Status"));
+        tablePanel.add(headerPanel);
+
+        for (Application app : myApps) {
+            // Find job details
+            Job job = null;
+            for (Job j : allJobs) {
+                if (j.getJobId().equals(app.getJobId())) {
+                    job = j;
+                    break;
+                }
+            }
+
+            JPanel rowPanel = new JPanel(new GridLayout(1, 5, 5, 0));
+            rowPanel.setBackground(Color.WHITE);
+            rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+            rowPanel.setPreferredSize(new Dimension(0, 45));  // 减小行高
+
+            rowPanel.add(createCellLabel(app.getApplyTime()));
+
+            if (job != null) {
+                rowPanel.add(createCellLabel(job.getModuleName()));
+                rowPanel.add(createCellLabel(job.getModuleCode()));
+                rowPanel.add(createCellLabel(String.valueOf(job.getWeeklyHours())));
+            } else {
+                rowPanel.add(createCellLabel("Position not found"));
+                rowPanel.add(createCellLabel("-"));
+                rowPanel.add(createCellLabel("-"));
+            }
+
+            // Status with color
+            String statusText;
+            Color statusColor;
+            switch (app.getStatus().toUpperCase()) {
+                case "ACCEPTED":
+                    statusText = "Accepted";
+                    statusColor = new Color(76, 175, 80);
+                    break;
+                case "REJECTED":
+                    statusText = "Rejected";
+                    statusColor = new Color(244, 67, 54);
+                    break;
+                default:
+                    statusText = "Pending";
+                    statusColor = new Color(255, 152, 0);
+                    break;
+            }
+
+            JLabel statusLabel = createCellLabel(statusText);
+            statusLabel.setForeground(statusColor);
+            rowPanel.add(statusLabel);
+
+            tablePanel.add(rowPanel);
+        }
+
+        // 添加滚动条
+        JScrollPane scrollPane = new JScrollPane(tablePanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        setContent(panel);
     }
-
-    // ========== MO Functions ==========
-    private void postJob() {
-        showPlaceholder("Post Position");
-    }
-
-    private void viewMyJobs() {
-        showPlaceholder("View Positions I've Posted");
-    }
-
+//========== MO Functions ==========
+    /**
+     * View applicants for MO's positions (with "All Positions" option)
+     */
     private void viewApplicants() {
-        showPlaceholder("View Applicants");
+        // Load jobs posted by this MO
+        List<Job> allJobs = FileUtil.loadJobs();
+        List<Job> myJobs = new ArrayList<>();
+
+        for (Job job : allJobs) {
+            if (job.getMoEmail().equals(currentUser.getEmail())) {
+                myJobs.add(job);
+            }
+        }
+
+        if (myJobs.isEmpty()) {
+            JPanel panel = new JPanel();
+            panel.setLayout(new BorderLayout());
+            panel.setBackground(Color.WHITE);
+            panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+            JLabel emptyLabel = new JLabel("You haven't posted any positions yet. Go to 'Post Position' to create one.", SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            panel.add(emptyLabel, BorderLayout.CENTER);
+            setContent(panel);
+            return;
+        }
+
+        // Create job selection panel
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Top panel with job selector
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        topPanel.setBackground(Color.WHITE);
+
+        topPanel.add(new JLabel("Select Position:"));
+
+        JComboBox<Object> jobCombo = new JComboBox<>();
+        // Add "All Positions" option first
+        jobCombo.addItem("All Positions");
+        for (Job job : myJobs) {
+            jobCombo.addItem(job);
+        }
+
+        jobCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                if (value instanceof Job) {
+                    Job job = (Job) value;
+                    value = job.getModuleCode() + " - " + job.getModuleName() + " (" + job.getStatus() + ")";
+                }
+                return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            }
+        });
+        jobCombo.setPreferredSize(new Dimension(350, 30));
+        topPanel.add(jobCombo);
+
+        JButton refreshBtn = UIHelper.createButton("Refresh", UIHelper.PRIMARY_COLOR);
+
+        final JPanel finalPanel = panel;
+        final JComboBox<Object> finalJobCombo = jobCombo;
+
+        refreshBtn.addActionListener(e -> {
+            refreshApplicantsView(finalPanel, finalJobCombo);
+        });
+        topPanel.add(refreshBtn);
+
+        panel.add(topPanel, BorderLayout.NORTH);
+
+        // Content panel for applicants
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BorderLayout());
+        contentPanel.setBackground(Color.WHITE);
+        panel.add(contentPanel, BorderLayout.CENTER);
+
+        setContent(panel);
+
+        // Load initial applicants
+        refreshApplicantsView(panel, jobCombo);
+    }
+    private void postJob() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title
+        JLabel titleLabel = new JLabel("Post New Position");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Form fields - 使用更大的尺寸
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new GridBagLayout());
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);  // 增加间距
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        int row = 0;
+
+        // Module Code - 增大宽度
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        JLabel moduleCodeLabel = new JLabel("Module Code:");
+        moduleCodeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        moduleCodeLabel.setPreferredSize(new Dimension(150, 30));
+        formPanel.add(moduleCodeLabel, gbc);
+
+        JTextField moduleCodeField = new JTextField(25);
+        moduleCodeField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        moduleCodeField.setPreferredSize(new Dimension(350, 35));
+        gbc.gridx = 1;
+        formPanel.add(moduleCodeField, gbc);
+        row++;
+
+        // Module Name
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        JLabel moduleNameLabel = new JLabel("Module Name:");
+        moduleNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        moduleNameLabel.setPreferredSize(new Dimension(150, 30));
+        formPanel.add(moduleNameLabel, gbc);
+
+        JTextField moduleNameField = new JTextField(25);
+        moduleNameField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        moduleNameField.setPreferredSize(new Dimension(350, 35));
+        gbc.gridx = 1;
+        formPanel.add(moduleNameField, gbc);
+        row++;
+
+        // Description - 增大文本区域
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        JLabel descLabel = new JLabel("Description:");
+        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        descLabel.setPreferredSize(new Dimension(150, 30));
+        formPanel.add(descLabel, gbc);
+
+        JTextArea descArea = new JTextArea(4, 30);
+        descArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        descArea.setLineWrap(true);
+        descArea.setWrapStyleWord(true);
+        JScrollPane descScroll = new JScrollPane(descArea);
+        descScroll.setPreferredSize(new Dimension(350, 80));
+        descScroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+        gbc.gridx = 1;
+        formPanel.add(descScroll, gbc);
+        row++;
+
+        // Weekly Hours
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        JLabel hoursLabel = new JLabel("Weekly Hours (1-20):");
+        hoursLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        hoursLabel.setPreferredSize(new Dimension(150, 30));
+        formPanel.add(hoursLabel, gbc);
+
+        JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 20, 1));
+        hoursSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        hoursSpinner.setPreferredSize(new Dimension(100, 35));
+        gbc.gridx = 1;
+        formPanel.add(hoursSpinner, gbc);
+        row++;
+
+        // Applicant Limit
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        JLabel limitLabel = new JLabel("Applicant Limit:");
+        limitLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        limitLabel.setPreferredSize(new Dimension(150, 30));
+        formPanel.add(limitLabel, gbc);
+
+        JPanel limitPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        limitPanel.setBackground(Color.WHITE);
+
+        JSpinner limitSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 50, 1));
+        limitSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        limitSpinner.setPreferredSize(new Dimension(100, 35));
+        limitPanel.add(limitSpinner);
+
+        JLabel limitHint = new JLabel("(Number of TAs to hire)");
+        limitHint.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        limitHint.setForeground(new Color(150, 150, 150));
+        limitPanel.add(limitHint);
+
+        gbc.gridx = 1;
+        formPanel.add(limitPanel, gbc);
+        row++;
+
+        // Deadline
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        JLabel deadlineLabel = new JLabel("Deadline (YYYY-MM-DD):");
+        deadlineLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        deadlineLabel.setPreferredSize(new Dimension(150, 30));
+        formPanel.add(deadlineLabel, gbc);
+
+        JTextField deadlineField = new JTextField(15);
+        deadlineField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        deadlineField.setPreferredSize(new Dimension(200, 35));
+        deadlineField.setToolTipText("Format: 2024-12-31");
+        gbc.gridx = 1;
+        formPanel.add(deadlineField, gbc);
+        row++;
+
+        // Requirements - 增大文本区域
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        JLabel reqLabel = new JLabel("Requirements:");
+        reqLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        reqLabel.setPreferredSize(new Dimension(150, 30));
+        formPanel.add(reqLabel, gbc);
+
+        JTextArea reqArea = new JTextArea(4, 30);
+        reqArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        reqArea.setLineWrap(true);
+        reqArea.setWrapStyleWord(true);
+        JScrollPane reqScroll = new JScrollPane(reqArea);
+        reqScroll.setPreferredSize(new Dimension(350, 80));
+        reqScroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+        gbc.gridx = 1;
+        formPanel.add(reqScroll, gbc);
+        row++;
+
+        panel.add(formPanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Buttons
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton submitBtn = UIHelper.createButton("Post Position", UIHelper.SUCCESS_COLOR);
+        submitBtn.setPreferredSize(new Dimension(150, 40));
+        submitBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+
+        JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
+        cancelBtn.setPreferredSize(new Dimension(120, 40));
+        cancelBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+
+        submitBtn.addActionListener(e -> {
+            // Validation
+            String moduleCode = moduleCodeField.getText().trim();
+            String moduleName = moduleNameField.getText().trim();
+            String description = descArea.getText().trim();
+            int hours = (int) hoursSpinner.getValue();
+            int limit = (int) limitSpinner.getValue();
+            String deadline = deadlineField.getText().trim();
+            String requirements = reqArea.getText().trim();
+
+            if (moduleCode.isEmpty() || moduleName.isEmpty() || description.isEmpty() || deadline.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please fill in all required fields", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Validate deadline format
+            if (!deadline.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                JOptionPane.showMessageDialog(this, "Deadline must be in format YYYY-MM-DD", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Generate Job ID
+            String jobId = "JOB" + System.currentTimeMillis();
+
+            // Create job
+            Job newJob = new Job(jobId, currentUser.getEmail(), moduleCode, moduleName,
+                    description, hours, deadline, requirements, "OPEN", limit);
+
+            // Save to file
+            List<Job> jobs = FileUtil.loadJobs();
+            jobs.add(newJob);
+            FileUtil.saveJobs(jobs);
+
+            // Log
+            LoggerUtil.logCreate("Job", jobId + " - " + moduleCode + " (Limit: " + limit + ")");
+
+            JOptionPane.showMessageDialog(this,
+                    "Position posted successfully!\n\n" +
+                            "Job ID: " + jobId + "\n" +
+                            "Module: " + moduleCode + " - " + moduleName + "\n" +
+                            "Applicant Limit: " + limit,
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+
+            // Clear form
+            moduleCodeField.setText("");
+            moduleNameField.setText("");
+            descArea.setText("");
+            hoursSpinner.setValue(5);
+            limitSpinner.setValue(5);
+            deadlineField.setText("");
+            reqArea.setText("");
+
+            // Refresh view
+            viewMyJobs();
+        });
+
+        cancelBtn.addActionListener(e -> viewMyJobs());
+
+        buttonPanel.add(submitBtn);
+        buttonPanel.add(cancelBtn);
+        panel.add(buttonPanel);
+
+        setContent(panel);
+    }
+    /**
+     * View jobs posted by the current MO (with edit, delete, toggle status, and applicant count)
+     */
+    private void viewMyJobs() {
+        List<Job> allJobs = FileUtil.loadJobs();
+        List<Job> myJobs = new ArrayList<>();
+
+        for (Job job : allJobs) {
+            if (job.getMoEmail().equals(currentUser.getEmail())) {
+                myJobs.add(job);
+            }
+        }
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title and buttons
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BorderLayout());
+        topPanel.setBackground(Color.WHITE);
+
+        JLabel titleLabel = new JLabel("My Posted Positions");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        topPanel.add(titleLabel, BorderLayout.WEST);
+
+        JButton newBtn = UIHelper.createButton("+ New Position", UIHelper.SUCCESS_COLOR);
+        newBtn.addActionListener(e -> postJob());
+        topPanel.add(newBtn, BorderLayout.EAST);
+
+        panel.add(topPanel, BorderLayout.NORTH);
+
+        if (myJobs.isEmpty()) {
+            JLabel emptyLabel = new JLabel("You haven't posted any positions yet. Click 'New Position' to create one.", SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            panel.add(emptyLabel, BorderLayout.CENTER);
+            setContent(panel);
+            return;
+        }
+
+        // Table
+        JPanel tablePanel = new JPanel();
+        tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
+        tablePanel.setBackground(Color.WHITE);
+
+        // Header - 8 columns
+        JPanel headerPanel = new JPanel(new GridLayout(1, 8, 5, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerPanel.add(createHeaderLabel("Job ID"));
+        headerPanel.add(createHeaderLabel("Module Code"));
+        headerPanel.add(createHeaderLabel("Module Name"));
+        headerPanel.add(createHeaderLabel("Weekly Hours"));
+        headerPanel.add(createHeaderLabel("Deadline"));
+        headerPanel.add(createHeaderLabel("Applicants"));
+        headerPanel.add(createHeaderLabel("Status"));
+        headerPanel.add(createHeaderLabel("Action"));
+        tablePanel.add(headerPanel);
+
+        // Sort by deadline
+        myJobs.sort((j1, j2) -> j1.getDeadline().compareTo(j2.getDeadline()));
+
+        // Load all applications once for efficiency
+        List<Application> allApps = FileUtil.loadApplications();
+
+        for (Job job : myJobs) {
+            // Count accepted applicants for this job
+            int acceptedCount = (int) allApps.stream().filter(app -> app.getJobId().equals(job.getJobId()) && "ACCEPTED".equals(app.getStatus())).count();
+
+            JPanel rowPanel = new JPanel(new GridLayout(1, 8, 5, 0));
+            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+            rowPanel.setBackground(Color.WHITE);
+            rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+            rowPanel.setPreferredSize(new Dimension(0, 45));  // 减小行高
+
+            rowPanel.add(createCellLabel(job.getJobId()));
+            rowPanel.add(createCellLabel(job.getModuleCode()));
+            rowPanel.add(createCellLabel(job.getModuleName()));
+            rowPanel.add(createCellLabel(String.valueOf(job.getWeeklyHours())));
+            rowPanel.add(createCellLabel(job.getDeadline()));
+
+            // Applicants column
+            JLabel applicantsLabel = createCellLabel(acceptedCount + " / " + job.getApplicantLimit());
+            if (acceptedCount >= job.getApplicantLimit()) {
+                applicantsLabel.setForeground(new Color(244, 67, 54));
+            } else {
+                applicantsLabel.setForeground(new Color(76, 175, 80));
+            }
+            rowPanel.add(applicantsLabel);
+
+            // Status
+            String statusText = "OPEN".equals(job.getStatus()) ? "Open ✓" : "Closed";
+            Color statusColor = "OPEN".equals(job.getStatus()) ? new Color(76, 175, 80) : new Color(150, 150, 150);
+            JLabel statusLabel = createCellLabel(statusText);
+            statusLabel.setForeground(statusColor);
+            rowPanel.add(statusLabel);
+
+            // Action buttons panel
+            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+            actionPanel.setBackground(Color.WHITE);
+
+            final Job finalJob = job;
+
+            // Edit button
+            JButton editBtn = new JButton("Edit");
+            editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            editBtn.setBackground(new Color(255, 152, 0));
+            editBtn.setForeground(Color.WHITE);
+            editBtn.setFocusPainted(false);
+            editBtn.setBorderPainted(false);
+            editBtn.setOpaque(true);
+            editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            editBtn.addActionListener(e -> editPostedPosition(finalJob));
+
+            // Delete button
+            JButton deleteBtn = new JButton("Delete");
+            deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            deleteBtn.setBackground(new Color(244, 67, 54));
+            deleteBtn.setForeground(Color.WHITE);
+            deleteBtn.setFocusPainted(false);
+            deleteBtn.setBorderPainted(false);
+            deleteBtn.setOpaque(true);
+            deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            deleteBtn.addActionListener(e -> {
+                int applicantCount = 0;
+                for (Application app : allApps) {
+                    if (app.getJobId().equals(finalJob.getJobId())) {
+                        applicantCount++;
+                    }
+                }
+
+                String message = applicantCount > 0 ?
+                        "⚠ Warning: This position has " + applicantCount + " applicant(s).\n\nDeleting it will remove the position and ALL associated applications.\n\nThis action cannot be undone.\n\nAre you sure you want to delete?" :
+                        "Are you sure you want to delete this position?\n\nThis action cannot be undone.";
+
+                int confirm = JOptionPane.showConfirmDialog(this, message, "Confirm Delete",
+                        JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    List<Job> jobs = FileUtil.loadJobs();
+                    jobs.removeIf(j -> j.getJobId().equals(finalJob.getJobId()));
+                    FileUtil.saveJobs(jobs);
+                    if (applicantCount > 0) {
+                        List<Application> updatedApps = FileUtil.loadApplications();
+                        updatedApps.removeIf(app -> app.getJobId().equals(finalJob.getJobId()));
+                        FileUtil.saveApplications(updatedApps);
+                    }
+                    LoggerUtil.logDelete("Job", finalJob.getJobId());
+                    viewMyJobs();
+                }
+            });
+
+            // Close/Open button
+            JButton toggleBtn;
+            if ("OPEN".equals(job.getStatus())) {
+                toggleBtn = new JButton("Close");
+                toggleBtn.setBackground(new Color(244, 67, 54));
+            } else {
+                toggleBtn = new JButton("Reopen");
+                toggleBtn.setBackground(new Color(76, 175, 80));
+            }
+            toggleBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            toggleBtn.setForeground(Color.WHITE);
+            toggleBtn.setFocusPainted(false);
+            toggleBtn.setBorderPainted(false);
+            toggleBtn.setOpaque(true);
+            toggleBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            toggleBtn.addActionListener(e -> {
+                String newStatus = "OPEN".equals(job.getStatus()) ? "CLOSED" : "OPEN";
+                if (newStatus.equals("OPEN") && acceptedCount >= job.getApplicantLimit()) {
+                    JOptionPane.showMessageDialog(this, "Cannot reopen: Position has reached applicant limit (" + acceptedCount + "/" + job.getApplicantLimit() + ").", "Position Full", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                int confirm = JOptionPane.showConfirmDialog(this, (newStatus.equals("CLOSED") ? "Close" : "Reopen") + " position?",
+                        "Confirm", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    List<Job> jobs = FileUtil.loadJobs();
+                    for (Job j : jobs) {
+                        if (j.getJobId().equals(job.getJobId())) {
+                            j.setStatus(newStatus);
+                            break;
+                        }
+                    }
+                    FileUtil.saveJobs(jobs);
+                    viewMyJobs();
+                }
+            });
+
+            actionPanel.add(editBtn);
+            actionPanel.add(deleteBtn);
+            actionPanel.add(toggleBtn);
+            rowPanel.add(actionPanel);
+
+            tablePanel.add(rowPanel);
+        }
+
+        // 添加滚动条
+        JScrollPane scrollPane = new JScrollPane(tablePanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        setContent(panel);
     }
 
-    private void editPostedPosition() {
-        showPlaceholder("Edit Posted Position");
+    private void refreshApplicantsView(JPanel parentPanel, JComboBox<Object> jobCombo) {
+        Object selectedItem = jobCombo.getSelectedItem();
+
+        // Get all applications
+        List<Application> allApps = FileUtil.loadApplications();
+        List<Job> allJobs = FileUtil.loadJobs();
+
+        // Get jobs posted by this MO
+        List<Job> myJobs = new ArrayList<>();
+        for (Job job : allJobs) {
+            if (job.getMoEmail().equals(currentUser.getEmail())) {
+                myJobs.add(job);
+            }
+        }
+
+        // Determine which applications to show
+        List<Application> jobApps = new ArrayList<>();
+        Job selectedJob = null;
+
+        if (selectedItem instanceof String && selectedItem.equals("All Positions")) {
+            // Show all applications from all my jobs
+            for (Job job : myJobs) {
+                for (Application app : allApps) {
+                    if (app.getJobId().equals(job.getJobId())) {
+                        jobApps.add(app);
+                    }
+                }
+            }
+        } else if (selectedItem instanceof Job) {
+            selectedJob = (Job) selectedItem;
+            for (Application app : allApps) {
+                if (app.getJobId().equals(selectedJob.getJobId())) {
+                    jobApps.add(app);
+                }
+            }
+        } else {
+            return;
+        }
+
+        // Get profiles for TAs
+        List<Profile> allProfiles = FileUtil.loadProfiles();
+        List<User> allUsers = FileUtil.loadUsers();
+
+        // Create content panel
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BorderLayout());
+        contentPanel.setBackground(Color.WHITE);
+
+        // Job info panel
+        JPanel jobInfoPanel = new JPanel();
+        jobInfoPanel.setLayout(new BoxLayout(jobInfoPanel, BoxLayout.Y_AXIS));
+        jobInfoPanel.setBackground(new Color(240, 240, 240));
+        jobInfoPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+
+        if (selectedItem instanceof String && selectedItem.equals("All Positions")) {
+            int totalApplicants = 0;
+            int totalAccepted = 0;
+            for (Job job : myJobs) {
+                for (Application app : allApps) {
+                    if (app.getJobId().equals(job.getJobId())) {
+                        totalApplicants++;
+                        if ("ACCEPTED".equals(app.getStatus())) {
+                            totalAccepted++;
+                        }
+                    }
+                }
+            }
+            jobInfoPanel.add(new JLabel("All Positions - Summary"));
+            jobInfoPanel.add(new JLabel("Total Positions: " + myJobs.size()));
+            jobInfoPanel.add(new JLabel("Total Applicants: " + totalApplicants));
+            jobInfoPanel.add(new JLabel("Total Accepted: " + totalAccepted));
+        } else if (selectedJob != null) {
+            jobInfoPanel.add(new JLabel("Position: " + selectedJob.getModuleCode() + " - " + selectedJob.getModuleName()));
+            jobInfoPanel.add(new JLabel("Deadline: " + selectedJob.getDeadline()));
+            jobInfoPanel.add(new JLabel("Weekly Hours: " + selectedJob.getWeeklyHours()));
+            jobInfoPanel.add(new JLabel("Applicants: " + jobApps.size()));
+        }
+
+        contentPanel.add(jobInfoPanel, BorderLayout.NORTH);
+
+        if (jobApps.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No applicants for this selection.", SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            contentPanel.add(emptyLabel, BorderLayout.CENTER);
+        } else {
+            // 创建表格容器 - 使用 BoxLayout
+            JPanel tableContainer = new JPanel();
+            tableContainer.setLayout(new BoxLayout(tableContainer, BoxLayout.Y_AXIS));
+            tableContainer.setBackground(Color.WHITE);
+
+            // 确定列数
+            int columnCount = (selectedItem instanceof String && selectedItem.equals("All Positions")) ? 8 : 7;
+            boolean isAllPositions = (selectedItem instanceof String && selectedItem.equals("All Positions"));
+
+            // Header - 设置最大宽度
+            JPanel headerPanel = new JPanel(new GridLayout(1, columnCount, 5, 0));
+            headerPanel.setBackground(new Color(240, 240, 240));
+            headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            headerPanel.add(createHeaderLabel("Apply Date"));
+            headerPanel.add(createHeaderLabel("Name"));
+            headerPanel.add(createHeaderLabel("Student ID"));
+            headerPanel.add(createHeaderLabel("Major"));
+            if (isAllPositions) {
+                headerPanel.add(createHeaderLabel("Position"));
+            }
+            headerPanel.add(createHeaderLabel("Status"));
+            headerPanel.add(createHeaderLabel("Action"));
+            headerPanel.add(createHeaderLabel("Profile"));
+            tableContainer.add(headerPanel);
+
+            final JPanel finalParentPanel = parentPanel;
+            final JComboBox<Object> finalJobCombo = jobCombo;
+            final Job finalSelectedJob = selectedJob;
+
+            for (Application app : jobApps) {
+                // Find the job for this application
+                Job appJob = null;
+                for (Job job : allJobs) {
+                    if (job.getJobId().equals(app.getJobId())) {
+                        appJob = job;
+                        break;
+                    }
+                }
+
+                // Find TA profile
+                Profile taProfile = null;
+                for (Profile p : allProfiles) {
+                    if (p.getEmail().equalsIgnoreCase(app.getTaEmail())) {
+                        taProfile = p;
+                        break;
+                    }
+                }
+
+                User taUser = null;
+                for (User u : allUsers) {
+                    if (u.getEmail().equalsIgnoreCase(app.getTaEmail())) {
+                        taUser = u;
+                        break;
+                    }
+                }
+
+                // 创建行面板 - 设置最大宽度
+                JPanel rowPanel = new JPanel(new GridLayout(1, columnCount, 5, 0));
+                rowPanel.setBackground(Color.WHITE);
+                rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+                rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+                rowPanel.setPreferredSize(new Dimension(0, 50));
+
+                rowPanel.add(createCellLabel(app.getApplyTime()));
+                rowPanel.add(createCellLabel(taUser != null ? taUser.getName() : app.getTaEmail()));
+                rowPanel.add(createCellLabel(taProfile != null ? taProfile.getStudentId() : "Not set"));
+                rowPanel.add(createCellLabel(taProfile != null ? taProfile.getMajor() : "Not set"));
+
+                if (isAllPositions && appJob != null) {
+                    rowPanel.add(createCellLabel(appJob.getModuleCode() + " - " + appJob.getModuleName()));
+                }
+
+                // Status
+                JLabel statusLabel;
+                switch (app.getStatus().toUpperCase()) {
+                    case "ACCEPTED":
+                        statusLabel = createCellLabel("Accepted");
+                        statusLabel.setForeground(new Color(76, 175, 80));
+                        break;
+                    case "REJECTED":
+                        statusLabel = createCellLabel("Rejected");
+                        statusLabel.setForeground(new Color(244, 67, 54));
+                        break;
+                    default:
+                        statusLabel = createCellLabel("Pending");
+                        statusLabel.setForeground(new Color(255, 152, 0));
+                        break;
+                }
+                rowPanel.add(statusLabel);
+
+                // Action buttons
+                JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+                actionPanel.setBackground(Color.WHITE);
+
+                JButton acceptBtn = new JButton("Accept");
+                acceptBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                acceptBtn.setBackground(new Color(76, 175, 80));
+                acceptBtn.setForeground(Color.WHITE);
+                acceptBtn.setFocusPainted(false);
+                acceptBtn.setBorderPainted(false);
+                acceptBtn.setOpaque(true);
+                acceptBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+                JButton rejectBtn = new JButton("Reject");
+                rejectBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                rejectBtn.setBackground(new Color(244, 67, 54));
+                rejectBtn.setForeground(Color.WHITE);
+                rejectBtn.setFocusPainted(false);
+                rejectBtn.setBorderPainted(false);
+                rejectBtn.setOpaque(true);
+                rejectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+                final Application finalApp = app;
+                final Profile finalTaProfile = taProfile;
+                final User finalTaUser = taUser;
+                final Job finalAppJob = appJob;
+
+                if (!app.getStatus().equals("PENDING")) {
+                    acceptBtn.setEnabled(false);
+                    acceptBtn.setBackground(new Color(150, 150, 150));
+                    rejectBtn.setEnabled(false);
+                    rejectBtn.setBackground(new Color(150, 150, 150));
+                } else {
+                    acceptBtn.addActionListener(e -> {
+                        int confirm = JOptionPane.showConfirmDialog(this,
+                                "Accept " + (finalTaUser != null ? finalTaUser.getName() : finalApp.getTaEmail()) +
+                                        " for " + (finalAppJob != null ? finalAppJob.getModuleCode() : "position") + "?",
+                                "Confirm Acceptance",
+                                JOptionPane.YES_NO_OPTION);
+                        if (confirm == JOptionPane.YES_OPTION) {
+                            updateApplicationStatus(finalApp.getApplicationId(), "ACCEPTED", finalAppJob);
+                            refreshApplicantsView(finalParentPanel, finalJobCombo);
+                        }
+                    });
+
+                    rejectBtn.addActionListener(e -> {
+                        int confirm = JOptionPane.showConfirmDialog(this,
+                                "Reject " + (finalTaUser != null ? finalTaUser.getName() : finalApp.getTaEmail()) +
+                                        " for " + (finalAppJob != null ? finalAppJob.getModuleCode() : "position") + "?",
+                                "Confirm Rejection",
+                                JOptionPane.YES_NO_OPTION);
+                        if (confirm == JOptionPane.YES_OPTION) {
+                            updateApplicationStatus(finalApp.getApplicationId(), "REJECTED", finalAppJob);
+                            refreshApplicantsView(finalParentPanel, finalJobCombo);
+                        }
+                    });
+                }
+
+                actionPanel.add(acceptBtn);
+                actionPanel.add(rejectBtn);
+                rowPanel.add(actionPanel);
+
+                // View Profile button
+                JPanel profileBtnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+                profileBtnPanel.setBackground(Color.WHITE);
+
+                JButton viewProfileBtn = new JButton("View Profile");
+                viewProfileBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                viewProfileBtn.setBackground(new Color(79, 114, 139));
+                viewProfileBtn.setForeground(Color.WHITE);
+                viewProfileBtn.setFocusPainted(false);
+                viewProfileBtn.setBorderPainted(false);
+                viewProfileBtn.setOpaque(true);
+                viewProfileBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+                viewProfileBtn.addActionListener(e -> {
+                    if (finalTaProfile != null) {
+                        viewTaProfile(finalTaProfile, finalTaUser);
+                    } else {
+                        JOptionPane.showMessageDialog(this,
+                                "No profile data available for this TA.\n\n" +
+                                        "The TA may not have created their profile yet.",
+                                "Profile Not Found",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    }
+                });
+
+                profileBtnPanel.add(viewProfileBtn);
+                rowPanel.add(profileBtnPanel);
+
+                tableContainer.add(rowPanel);
+            }
+
+            // 关键：将 tableContainer 放入 JScrollPane
+            JScrollPane scrollPane = new JScrollPane(tableContainer);
+            scrollPane.setBorder(BorderFactory.createEmptyBorder());
+            scrollPane.getViewport().setBackground(Color.WHITE);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+            contentPanel.add(scrollPane, BorderLayout.CENTER);
+        }
+
+        // Update the parent panel
+        Component[] components = parentPanel.getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JPanel && ((JPanel) comp).getLayout() instanceof BorderLayout) {
+                JPanel oldContent = (JPanel) comp;
+                oldContent.removeAll();
+                oldContent.add(contentPanel, BorderLayout.CENTER);
+                oldContent.revalidate();
+                oldContent.repaint();
+                break;
+            }
+        }
+    }
+
+    private void updateApplicationStatus(String applicationId, String newStatus, Job job) {
+        List<Application> apps = FileUtil.loadApplications();
+        for (Application app : apps) {
+            if (app.getApplicationId().equals(applicationId)) {
+                app.setStatus(newStatus);
+                break;
+            }
+        }
+        FileUtil.saveApplications(apps);
+
+        // If accepting an applicant, check if the position has reached its limit
+        if (newStatus.equals("ACCEPTED")) {
+            // Count how many accepted applicants for this job
+            int acceptedCount = 0;
+            for (Application app : apps) {
+                if (app.getJobId().equals(job.getJobId()) && "ACCEPTED".equals(app.getStatus())) {
+                    acceptedCount++;
+                }
+            }
+
+            // Only close the job if the limit has been reached
+            if (acceptedCount >= job.getApplicantLimit()) {
+                List<Job> jobs = FileUtil.loadJobs();
+                for (Job j : jobs) {
+                    if (j.getJobId().equals(job.getJobId())) {
+                        j.setStatus("CLOSED");
+                        LoggerUtil.logInfo("Job " + job.getJobId() + " closed after reaching applicant limit (" + acceptedCount + "/" + job.getApplicantLimit() + ")");
+                        break;
+                    }
+                }
+                FileUtil.saveJobs(jobs);
+                JOptionPane.showMessageDialog(this,
+                        "Position has now reached its applicant limit and has been closed.",
+                        "Position Full", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+
+        LoggerUtil.logUpdate("Application", applicationId + " -> " + newStatus);
+        JOptionPane.showMessageDialog(this, "Application status updated to " + newStatus + "!", "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Edit an existing posted position
+     */
+    private void editPostedPosition(Job job) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title
+        JLabel titleLabel = new JLabel("Edit Position: " + job.getModuleCode() + " - " + job.getModuleName());
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Form fields
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new GridBagLayout());
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        int row = 0;
+
+        // Job ID (read-only)
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Job ID:"), gbc);
+
+        JLabel jobIdLabel = new JLabel(job.getJobId());
+        jobIdLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        jobIdLabel.setForeground(new Color(100, 100, 100));
+        gbc.gridx = 1;
+        formPanel.add(jobIdLabel, gbc);
+        row++;
+
+        // Module Code (read-only)
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Module Code:"), gbc);
+
+        JLabel moduleCodeLabel = new JLabel(job.getModuleCode());
+        moduleCodeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        moduleCodeLabel.setForeground(new Color(100, 100, 100));
+        gbc.gridx = 1;
+        formPanel.add(moduleCodeLabel, gbc);
+        row++;
+
+        // Module Name (read-only)
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Module Name:"), gbc);
+
+        JLabel moduleNameLabel = new JLabel(job.getModuleName());
+        moduleNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        moduleNameLabel.setForeground(new Color(100, 100, 100));
+        gbc.gridx = 1;
+        formPanel.add(moduleNameLabel, gbc);
+        row++;
+
+        // Description
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Description:"), gbc);
+
+        JTextArea descArea = new JTextArea(job.getDescription(), 3, 20);
+        descArea.setLineWrap(true);
+        descArea.setWrapStyleWord(true);
+        JScrollPane descScroll = new JScrollPane(descArea);
+        descScroll.setPreferredSize(new Dimension(250, 60));
+        gbc.gridx = 1;
+        formPanel.add(descScroll, gbc);
+        row++;
+
+        // Weekly Hours - 添加安全检查
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Weekly Hours (1-20):"), gbc);
+
+        int weeklyHours = job.getWeeklyHours();
+        if (weeklyHours < 1) weeklyHours = 5;
+        if (weeklyHours > 20) weeklyHours = 20;
+        JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(weeklyHours, 1, 20, 1));
+        hoursSpinner.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(hoursSpinner, gbc);
+        row++;
+
+        // Applicant Limit - 添加安全检查
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Applicant Limit (1-50):"), gbc);
+
+        int applicantLimit = job.getApplicantLimit();
+        if (applicantLimit < 1) applicantLimit = 5;
+        if (applicantLimit > 50) applicantLimit = 50;
+        JSpinner limitSpinner = new JSpinner(new SpinnerNumberModel(applicantLimit, 1, 50, 1));
+        limitSpinner.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(limitSpinner, gbc);
+
+        JLabel limitHint = new JLabel("(Number of TAs to hire)");
+        limitHint.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        limitHint.setForeground(new Color(150, 150, 150));
+        gbc.gridx = 2;
+        formPanel.add(limitHint, gbc);
+        row++;
+
+        // Deadline
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Deadline (YYYY-MM-DD):"), gbc);
+
+        JTextField deadlineField = new JTextField(job.getDeadline(), 20);
+        deadlineField.setPreferredSize(new Dimension(250, 30));
+        gbc.gridx = 1;
+        formPanel.add(deadlineField, gbc);
+        row++;
+
+        // Requirements
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        formPanel.add(new JLabel("Requirements:"), gbc);
+
+        JTextArea reqArea = new JTextArea(job.getRequirements(), 3, 20);
+        reqArea.setLineWrap(true);
+        reqArea.setWrapStyleWord(true);
+        JScrollPane reqScroll = new JScrollPane(reqArea);
+        reqScroll.setPreferredSize(new Dimension(250, 60));
+        gbc.gridx = 1;
+        formPanel.add(reqScroll, gbc);
+        row++;
+
+        panel.add(formPanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Warning for jobs with applicants - 计算 acceptedCount
+        List<Application> allApps = FileUtil.loadApplications();
+        boolean hasApplicants = false;
+        int acceptedCount = 0;
+        for (Application app : allApps) {
+            if (app.getJobId().equals(job.getJobId())) {
+                hasApplicants = true;
+                if ("ACCEPTED".equals(app.getStatus())) {
+                    acceptedCount++;
+                }
+            }
+        }
+
+        // 创建 final 变量用于 lambda 表达式
+        final int finalAcceptedCount = acceptedCount;
+        final Job finalJob = job;
+
+        if (hasApplicants) {
+            JPanel warningPanel = new JPanel();
+            warningPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+            warningPanel.setBackground(new Color(255, 243, 224));
+            warningPanel.setBorder(BorderFactory.createLineBorder(new Color(255, 152, 0)));
+            warningPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            warningPanel.setMaximumSize(new Dimension(500, 50));
+
+            JLabel warningLabel = new JLabel("Warning: This position already has applicants. Modifying it may affect existing applications.");
+            warningLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            warningLabel.setForeground(new Color(255, 152, 0));
+            warningPanel.add(warningLabel);
+
+            panel.add(warningPanel);
+            panel.add(Box.createRigidArea(new Dimension(0, 20)));
+        }
+
+        // Buttons
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton saveBtn = UIHelper.createButton("Save Changes", UIHelper.SUCCESS_COLOR);
+        JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
+
+        saveBtn.addActionListener(e -> {
+            String description = descArea.getText().trim();
+            int hours = (int) hoursSpinner.getValue();
+            int limit = (int) limitSpinner.getValue();
+            String deadline = deadlineField.getText().trim();
+            String requirements = reqArea.getText().trim();
+
+            if (description.isEmpty() || deadline.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please fill in all required fields", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Validate deadline format
+            if (!deadline.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                JOptionPane.showMessageDialog(this, "Deadline must be in format YYYY-MM-DD", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Check if reducing limit below current accepted count
+            if (limit < finalAcceptedCount) {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                        "Warning: You are reducing the applicant limit to " + limit +
+                                ", but there are already " + finalAcceptedCount + " accepted applicants.\n\n" +
+                                "This may cause issues. Are you sure you want to continue?",
+                        "Limit Reduction Warning",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (confirm != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
+
+            // Update job
+            List<Job> jobs = FileUtil.loadJobs();
+            for (int i = 0; i < jobs.size(); i++) {
+                Job j = jobs.get(i);
+                if (j.getJobId().equals(finalJob.getJobId())) {
+                    Job updatedJob = new Job(
+                            j.getJobId(),
+                            j.getMoEmail(),
+                            j.getModuleCode(),
+                            j.getModuleName(),
+                            description,
+                            hours,
+                            deadline,
+                            requirements,
+                            j.getStatus(),
+                            limit
+                    );
+                    jobs.set(i, updatedJob);
+                    break;
+                }
+            }
+            FileUtil.saveJobs(jobs);
+
+            LoggerUtil.logUpdate("Job", finalJob.getJobId() + " was updated (Hours: " + hours + ", Limit: " + limit + ")");
+            JOptionPane.showMessageDialog(this, "Position updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+            // Refresh view
+            viewMyJobs();
+        });
+
+        cancelBtn.addActionListener(e -> viewMyJobs());
+
+        buttonPanel.add(saveBtn);
+        buttonPanel.add(cancelBtn);
+        panel.add(buttonPanel);
+
+        setContent(panel);
     }
 
     // ========== Admin Functions ==========
+
     private void viewAllTAs() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -471,25 +2239,725 @@ public class DashboardFrame extends JFrame {
     }
 
     private void viewWorkload() {
-        showPlaceholder("View TA Workload");
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel titleLabel = new JLabel("TA Workload Management");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        // Load all data
+        List<User> allUsers = FileUtil.loadUsers();
+        List<Profile> allProfiles = FileUtil.loadProfiles();
+        List<Application> allApps = FileUtil.loadApplications();
+        List<Job> allJobs = FileUtil.loadJobs();
+
+        // Calculate workload for each TA
+        Map<String, Integer> workloadMap = new HashMap<>();
+        Map<String, List<Job>> taJobsMap = new HashMap<>();
+
+        // Initialize workload for all TA users
+        for (User user : allUsers) {
+            if (user.getRole().equals("TA")) {
+                workloadMap.put(user.getEmail(), 0);
+                taJobsMap.put(user.getEmail(), new ArrayList<>());
+            }
+        }
+
+        // Calculate workload from accepted applications
+        for (Application app : allApps) {
+            if (app.getStatus().equals("ACCEPTED")) {
+                // Find the job for this application
+                for (Job job : allJobs) {
+                    if (job.getJobId().equals(app.getJobId())) {
+                        int currentHours = workloadMap.getOrDefault(app.getTaEmail(), 0);
+                        workloadMap.put(app.getTaEmail(), currentHours + job.getWeeklyHours());
+
+                        // Add job to TA's job list
+                        List<Job> jobs = taJobsMap.getOrDefault(app.getTaEmail(), new ArrayList<>());
+                        jobs.add(job);
+                        taJobsMap.put(app.getTaEmail(), jobs);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Create table
+        JPanel tablePanel = new JPanel();
+        tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
+        tablePanel.setBackground(Color.WHITE);
+
+        // Header
+        JPanel headerPanel = new JPanel(new GridLayout(1, 4, 5, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerPanel.add(createHeaderLabel("TA Name"));
+        headerPanel.add(createHeaderLabel("Email"));
+        headerPanel.add(createHeaderLabel("Total Hours"));
+        headerPanel.add(createHeaderLabel("Status"));
+        tablePanel.add(headerPanel);
+
+        // Create list of TA workload entries and sort by hours (highest first)
+        List<Map.Entry<String, Integer>> sortedEntries = new ArrayList<>(workloadMap.entrySet());
+        sortedEntries.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+
+        for (Map.Entry<String, Integer> entry : sortedEntries) {
+            String email = entry.getKey();
+            int hours = entry.getValue();
+
+            // Find TA user
+            User taUser = null;
+            for (User u : allUsers) {
+                if (u.getEmail().equals(email)) {
+                    taUser = u;
+                    break;
+                }
+            }
+
+            // Find TA profile
+            Profile taProfile = null;
+            for (Profile p : allProfiles) {
+                if (p.getEmail().equals(email)) {
+                    taProfile = p;
+                    break;
+                }
+            }
+
+            String name = taUser != null ? taUser.getName() : email;
+            String studentId = taProfile != null ? taProfile.getStudentId() : "N/A";
+
+            JPanel rowPanel = new JPanel(new GridLayout(1, 4, 5, 0));
+            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+            rowPanel.setBackground(Color.WHITE);
+            rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+            rowPanel.setPreferredSize(new Dimension(0, 45));
+
+            rowPanel.add(createCellLabel(name + " (" + studentId + ")"));
+            rowPanel.add(createCellLabel(email));
+
+            // Hours with color coding
+            JLabel hoursLabel = createCellLabel(hours + " hrs/week");
+            if (hours > 15) {
+                hoursLabel.setForeground(new Color(244, 67, 54)); // Red - overloaded
+            } else if (hours > 10) {
+                hoursLabel.setForeground(new Color(255, 152, 0)); // Orange - heavy
+            } else if (hours > 5) {
+                hoursLabel.setForeground(new Color(76, 175, 80)); // Green - moderate
+            } else {
+                hoursLabel.setForeground(new Color(150, 150, 150)); // Gray - light
+            }
+            rowPanel.add(hoursLabel);
+
+            // Status
+            String statusText;
+            Color statusColor;
+            if (hours > 15) {
+                statusText = "Overloaded";
+                statusColor = new Color(244, 67, 54);
+            } else if (hours > 10) {
+                statusText = "Heavy";
+                statusColor = new Color(255, 152, 0);
+            } else if (hours > 0) {
+                statusText = "Normal";
+                statusColor = new Color(76, 175, 80);
+            } else {
+                statusText = "Idle";
+                statusColor = new Color(150, 150, 150);
+            }
+
+            JLabel statusLabel = createCellLabel(statusText);
+            statusLabel.setForeground(statusColor);
+            rowPanel.add(statusLabel);
+
+            // Make row clickable to show detailed job list
+            final String finalEmail = email;
+            final Map<String, List<Job>> finalTaJobsMap = taJobsMap;
+            rowPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    showTaJobDetails(finalEmail, finalTaJobsMap.get(finalEmail));
+                }
+                public void mouseEntered(java.awt.event.MouseEvent evt) {
+                    rowPanel.setBackground(new Color(240, 240, 240));
+                }
+                public void mouseExited(java.awt.event.MouseEvent evt) {
+                    rowPanel.setBackground(Color.WHITE);
+                }
+            });
+
+            tablePanel.add(rowPanel);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(tablePanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Add summary panel at bottom
+        JPanel summaryPanel = new JPanel();
+        summaryPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        summaryPanel.setBackground(Color.WHITE);
+        summaryPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
+
+        int totalHours = 0;
+        int activeTAs = 0;
+        int overloadedTAs = 0;
+        for (int hours : workloadMap.values()) {
+            totalHours += hours;
+            if (hours > 0) activeTAs++;
+            if (hours > 15) overloadedTAs++;
+        }
+
+        summaryPanel.add(new JLabel("Summary: " + activeTAs + " active TAs | "));
+        summaryPanel.add(new JLabel("Total workload: " + totalHours + " hrs/week | "));
+        summaryPanel.add(new JLabel("Overloaded: " + overloadedTAs + " TAs"));
+
+        panel.add(summaryPanel, BorderLayout.SOUTH);
+
+        setContent(panel);
     }
 
+    /**
+     * Show detailed job list for a specific TA
+     */
+    private void showTaJobDetails(String taEmail, List<Job> jobs) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title with back button
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new BorderLayout());
+        titlePanel.setBackground(Color.WHITE);
+
+        JLabel titleLabel = new JLabel("TA Workload Details: " + taEmail);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titlePanel.add(titleLabel, BorderLayout.WEST);
+
+        JButton backBtn = UIHelper.createButton("Back to Workload", UIHelper.SECONDARY_COLOR);
+        backBtn.addActionListener(e -> viewWorkload());
+        titlePanel.add(backBtn, BorderLayout.EAST);
+
+        panel.add(titlePanel, BorderLayout.NORTH);
+
+        if (jobs == null || jobs.isEmpty()) {
+            JLabel emptyLabel = new JLabel("This TA is not assigned to any positions.", SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            panel.add(emptyLabel, BorderLayout.CENTER);
+            setContent(panel);
+            return;
+        }
+
+        // Calculate total hours
+        int totalHours = 0;
+        for (Job job : jobs) {
+            totalHours += job.getWeeklyHours();
+        }
+
+        // Job list table
+        JPanel tablePanel = new JPanel();
+        tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
+        tablePanel.setBackground(Color.WHITE);
+
+        // Header
+        JPanel headerPanel = new JPanel(new GridLayout(1, 5, 5, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerPanel.add(createHeaderLabel("Module Code"));
+        headerPanel.add(createHeaderLabel("Module Name"));
+        headerPanel.add(createHeaderLabel("Weekly Hours"));
+        headerPanel.add(createHeaderLabel("MO Email"));
+        headerPanel.add(createHeaderLabel("Deadline"));
+        tablePanel.add(headerPanel);
+
+        for (Job job : jobs) {
+            JPanel rowPanel = new JPanel(new GridLayout(1, 5, 5, 0));
+            rowPanel.setBackground(Color.WHITE);
+            rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+            rowPanel.setPreferredSize(new Dimension(0, 40));
+
+            rowPanel.add(createCellLabel(job.getModuleCode()));
+            rowPanel.add(createCellLabel(job.getModuleName()));
+            rowPanel.add(createCellLabel(String.valueOf(job.getWeeklyHours())));
+            rowPanel.add(createCellLabel(job.getMoEmail()));
+            rowPanel.add(createCellLabel(job.getDeadline()));
+
+            tablePanel.add(rowPanel);
+        }
+
+        // Total row
+        JPanel totalRow = new JPanel(new GridLayout(1, 5, 5, 0));
+        totalRow.setBackground(new Color(240, 240, 240));
+        totalRow.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        totalRow.add(createCellLabel(""));
+        totalRow.add(createCellLabel("TOTAL:"));
+        totalRow.add(createCellLabel(totalHours + " hrs/week"));
+        totalRow.add(createCellLabel(""));
+        totalRow.add(createCellLabel(""));
+        tablePanel.add(totalRow);
+
+        JScrollPane scrollPane = new JScrollPane(tablePanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        setContent(panel);
+    }
+
+    /**
+     * Manage TA workload - Admin can reassign or remove TA from positions
+     */
     private void manageWorkload() {
-        showPlaceholder("Manage Workload");
+        // Load all data
+        List<User> allUsers = FileUtil.loadUsers();
+        List<Profile> allProfiles = FileUtil.loadProfiles();
+        List<Application> allApps = FileUtil.loadApplications();
+        List<Job> allJobs = FileUtil.loadJobs();
+
+        // Collect all TAs with their workload
+        List<TaWorkloadInfo> taWorkloadList = new ArrayList<>();
+
+        for (User user : allUsers) {
+            if (user.getRole().equals("TA")) {
+                TaWorkloadInfo info = new TaWorkloadInfo();
+                info.taUser = user;
+
+                // Find profile
+                for (Profile p : allProfiles) {
+                    if (p.getEmail().equals(user.getEmail())) {
+                        info.profile = p;
+                        break;
+                    }
+                }
+
+                // Calculate workload and collect jobs
+                int totalHours = 0;
+                List<Job> taJobs = new ArrayList<>();
+                for (Application app : allApps) {
+                    if (app.getTaEmail().equals(user.getEmail()) && "ACCEPTED".equals(app.getStatus())) {
+                        for (Job job : allJobs) {
+                            if (job.getJobId().equals(app.getJobId())) {
+                                totalHours += job.getWeeklyHours();
+                                taJobs.add(job);
+                                break;
+                            }
+                        }
+                    }
+                }
+                info.totalHours = totalHours;
+                info.assignedJobs = taJobs;
+                taWorkloadList.add(info);
+            }
+        }
+
+        // Sort by workload (highest first)
+        taWorkloadList.sort((a, b) -> b.totalHours - a.totalHours);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title
+        JLabel titleLabel = new JLabel("Manage TA Workload");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        if (taWorkloadList.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No TAs registered yet.", SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            panel.add(emptyLabel, BorderLayout.CENTER);
+            setContent(panel);
+            return;
+        }
+
+        // Create main panel with scroll
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBackground(Color.WHITE);
+
+        // Instructions
+        JLabel instructionLabel = new JLabel("Click on a TA to view and manage their assigned positions");
+        instructionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        instructionLabel.setForeground(new Color(100, 100, 100));
+        instructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mainPanel.add(instructionLabel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+
+        // Header
+        JPanel headerPanel = new JPanel(new GridLayout(1, 5, 10, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        headerPanel.setMaximumSize(new Dimension(800, 45));
+        headerPanel.add(createHeaderLabel("TA Name"));
+        headerPanel.add(createHeaderLabel("Student ID"));
+        headerPanel.add(createHeaderLabel("Email"));
+        headerPanel.add(createHeaderLabel("Current Hours"));
+        headerPanel.add(createHeaderLabel("Status"));
+        mainPanel.add(headerPanel);
+
+        // TA list
+        for (TaWorkloadInfo info : taWorkloadList) {
+            JPanel rowPanel = new JPanel(new BorderLayout());
+            rowPanel.setBackground(Color.WHITE);
+            rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+            rowPanel.setMaximumSize(new Dimension(800, 55));
+            rowPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            JPanel infoPanel = new JPanel(new GridLayout(1, 5, 10, 0));
+            infoPanel.setBackground(Color.WHITE);
+            infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+
+            String name = info.taUser.getName();
+            String studentId = info.profile != null ? info.profile.getStudentId() : "N/A";
+            String email = info.taUser.getEmail();
+            String hours = info.totalHours + " hrs/week";
+
+            infoPanel.add(createCellLabel(name));
+            infoPanel.add(createCellLabel(studentId));
+            infoPanel.add(createCellLabel(email));
+
+            JLabel hoursLabel = createCellLabel(hours);
+            if (info.totalHours > 15) {
+                hoursLabel.setForeground(new Color(244, 67, 54));
+            } else if (info.totalHours > 10) {
+                hoursLabel.setForeground(new Color(255, 152, 0));
+            } else {
+                hoursLabel.setForeground(new Color(76, 175, 80));
+            }
+            infoPanel.add(hoursLabel);
+
+            String statusText;
+            Color statusColor;
+            if (info.totalHours > 15) {
+                statusText = "Overloaded";
+                statusColor = new Color(244, 67, 54);
+            } else if (info.totalHours > 10) {
+                statusText = "Heavy";
+                statusColor = new Color(255, 152, 0);
+            } else if (info.totalHours > 0) {
+                statusText = "Normal";
+                statusColor = new Color(76, 175, 80);
+            } else {
+                statusText = "Idle";
+                statusColor = new Color(150, 150, 150);
+            }
+            JLabel statusLabel = createCellLabel(statusText);
+            statusLabel.setForeground(statusColor);
+            infoPanel.add(statusLabel);
+
+            rowPanel.add(infoPanel, BorderLayout.CENTER);
+
+            // Make row clickable
+            final TaWorkloadInfo finalInfo = info;
+            rowPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    showManageTaWorkloadDialog(finalInfo, allJobs, allApps);
+                }
+                public void mouseEntered(java.awt.event.MouseEvent evt) {
+                    rowPanel.setBackground(new Color(245, 245, 245));
+                    infoPanel.setBackground(new Color(245, 245, 245));
+                }
+                public void mouseExited(java.awt.event.MouseEvent evt) {
+                    rowPanel.setBackground(Color.WHITE);
+                    infoPanel.setBackground(Color.WHITE);
+                }
+            });
+
+            mainPanel.add(rowPanel);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(mainPanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        setContent(panel);
+    }
+
+    /**
+     * Inner class to hold TA workload information
+     */
+    private class TaWorkloadInfo {
+        User taUser;
+        Profile profile;
+        int totalHours;
+        List<Job> assignedJobs;
+    }
+
+    /**
+     * Show dialog to manage a specific TA's workload
+     */
+    private void showManageTaWorkloadDialog(TaWorkloadInfo info, List<Job> allJobs, List<Application> allApps) {
+        JDialog dialog = new JDialog(this, "Manage Workload: " + info.taUser.getName(), true);
+        dialog.setSize(600, 500);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setBackground(Color.WHITE);
+
+        // TA Info
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(new Color(245, 245, 245));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        infoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        infoPanel.add(new JLabel("TA: " + info.taUser.getName()));
+        infoPanel.add(new JLabel("Email: " + info.taUser.getEmail()));
+        if (info.profile != null) {
+            infoPanel.add(new JLabel("Student ID: " + info.profile.getStudentId()));
+            infoPanel.add(new JLabel("Major: " + info.profile.getMajor()));
+        }
+        infoPanel.add(new JLabel("Total Hours: " + info.totalHours + " hrs/week"));
+
+        mainPanel.add(infoPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Assigned Jobs Section
+        JLabel jobsLabel = new JLabel("Assigned Positions:");
+        jobsLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        jobsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mainPanel.add(jobsLabel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        if (info.assignedJobs.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No positions assigned.");
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            mainPanel.add(emptyLabel);
+        } else {
+            // Jobs table
+            JPanel jobsTable = new JPanel();
+            jobsTable.setLayout(new BoxLayout(jobsTable, BoxLayout.Y_AXIS));
+            jobsTable.setBackground(Color.WHITE);
+
+            // Header
+            JPanel header = new JPanel(new GridLayout(1, 5, 5, 0));
+            header.setBackground(new Color(240, 240, 240));
+            header.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+            header.add(createHeaderLabel("Module"));
+            header.add(createHeaderLabel("Weekly Hours"));
+            header.add(createHeaderLabel("MO"));
+            header.add(createHeaderLabel("Deadline"));
+            header.add(createHeaderLabel("Action"));
+            jobsTable.add(header);
+
+            for (Job job : info.assignedJobs) {
+                JPanel row = new JPanel(new GridLayout(1, 5, 5, 0));
+                row.setBackground(Color.WHITE);
+                row.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+                row.setPreferredSize(new Dimension(0, 45));
+
+                row.add(createCellLabel(job.getModuleCode() + " - " + job.getModuleName()));
+                row.add(createCellLabel(job.getWeeklyHours() + " hrs"));
+                row.add(createCellLabel(job.getMoEmail()));
+                row.add(createCellLabel(job.getDeadline()));
+
+                // Remove button
+                JButton removeBtn = new JButton("Remove");
+                removeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                removeBtn.setBackground(new Color(244, 67, 54));
+                removeBtn.setForeground(Color.WHITE);
+                removeBtn.setFocusPainted(false);
+                removeBtn.setBorderPainted(false);
+                removeBtn.setOpaque(true);
+                removeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+                final Job finalJob = job;
+                removeBtn.addActionListener(e -> {
+                    int confirm = JOptionPane.showConfirmDialog(dialog,
+                            "Remove " + info.taUser.getName() + " from " + finalJob.getModuleCode() + "?\n\n" +
+                                    "This will free up " + finalJob.getWeeklyHours() + " hours/week from this TA.",
+                            "Confirm Removal",
+                            JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        // Update application status to REJECTED for this TA
+                        List<Application> apps = FileUtil.loadApplications();
+                        for (Application app : apps) {
+                            if (app.getTaEmail().equals(info.taUser.getEmail()) &&
+                                    app.getJobId().equals(finalJob.getJobId()) &&
+                                    "ACCEPTED".equals(app.getStatus())) {
+                                app.setStatus("REJECTED");
+                                break;
+                            }
+                        }
+                        FileUtil.saveApplications(apps);
+
+                        LoggerUtil.logUpdate("Workload", "Removed TA " + info.taUser.getEmail() + " from job " + finalJob.getJobId());
+                        JOptionPane.showMessageDialog(dialog, "TA removed from position successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        dialog.dispose();
+                        manageWorkload(); // Refresh
+                    }
+                });
+
+                JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+                actionPanel.setBackground(Color.WHITE);
+                actionPanel.add(removeBtn);
+                row.add(actionPanel);
+
+                jobsTable.add(row);
+            }
+
+            JScrollPane scrollPane = new JScrollPane(jobsTable);
+            scrollPane.setPreferredSize(new Dimension(540, 250));
+            scrollPane.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230)));
+            mainPanel.add(scrollPane);
+        }
+
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Close button
+        JButton closeBtn = UIHelper.createButton("Close", UIHelper.SECONDARY_COLOR);
+        closeBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        closeBtn.addActionListener(e -> dialog.dispose());
+        mainPanel.add(closeBtn);
+
+        dialog.add(mainPanel, BorderLayout.CENTER);
+        dialog.setVisible(true);
     }
 
     private void viewAllJobs() {
-        showPlaceholder("View All Positions");
+        List<Job> allJobs = FileUtil.loadJobs();
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title with filter options
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BorderLayout());
+        topPanel.setBackground(Color.WHITE);
+
+        JLabel titleLabel = new JLabel("All Positions");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        topPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Filter panel
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        filterPanel.setBackground(Color.WHITE);
+        filterPanel.add(new JLabel("Filter by status:"));
+
+        JComboBox<String> statusFilter = new JComboBox<>(new String[]{"All", "Open", "Closed"});
+        statusFilter.setPreferredSize(new Dimension(100, 30));
+        filterPanel.add(statusFilter);
+
+        JButton refreshBtn = UIHelper.createButton("Refresh", UIHelper.PRIMARY_COLOR);
+        filterPanel.add(refreshBtn);
+        topPanel.add(filterPanel, BorderLayout.EAST);
+
+        panel.add(topPanel, BorderLayout.NORTH);
+
+        // Create table panel
+        JPanel tablePanel = new JPanel();
+        tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
+        tablePanel.setBackground(Color.WHITE);
+
+        // Header
+        JPanel headerPanel = new JPanel(new GridLayout(1, 7, 5, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerPanel.add(createHeaderLabel("Job ID"));
+        headerPanel.add(createHeaderLabel("Module Code"));
+        headerPanel.add(createHeaderLabel("Module Name"));
+        headerPanel.add(createHeaderLabel("MO Email"));
+        headerPanel.add(createHeaderLabel("Weekly Hours"));
+        headerPanel.add(createHeaderLabel("Deadline"));
+        headerPanel.add(createHeaderLabel("Status"));
+        tablePanel.add(headerPanel);
+
+        // Function to refresh table based on filter
+        java.awt.event.ActionListener refreshAction = e -> {
+            String filter = (String) statusFilter.getSelectedItem();
+            refreshAllJobsTable(tablePanel, allJobs, filter);
+        };
+
+        refreshBtn.addActionListener(refreshAction);
+
+        // Initial load
+        refreshAllJobsTable(tablePanel, allJobs, "All");
+
+        JScrollPane scrollPane = new JScrollPane(tablePanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        setContent(panel);
     }
 
-    private void logout() {
-        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?", "Confirm", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            // Log logout action
-            LoggerUtil.logLogout(currentUser.getEmail(), currentUser.getRole());
-            dispose();
-            new LoginFrame();
+    private void refreshAllJobsTable(JPanel tablePanel, List<Job> allJobs, String filter) {
+        tablePanel.removeAll();
+
+        // Header
+        JPanel headerPanel = new JPanel(new GridLayout(1, 7, 5, 0));
+        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerPanel.add(createHeaderLabel("Job ID"));
+        headerPanel.add(createHeaderLabel("Module Code"));
+        headerPanel.add(createHeaderLabel("Module Name"));
+        headerPanel.add(createHeaderLabel("MO Email"));
+        headerPanel.add(createHeaderLabel("Weekly Hours"));
+        headerPanel.add(createHeaderLabel("Deadline"));
+        headerPanel.add(createHeaderLabel("Status"));
+        tablePanel.add(headerPanel);
+
+        // Filter jobs
+        List<Job> filteredJobs = new ArrayList<>();
+        for (Job job : allJobs) {
+            if (filter.equals("All")) {
+                filteredJobs.add(job);
+            } else if (filter.equals("Open") && job.getStatus().equals("OPEN")) {
+                filteredJobs.add(job);
+            } else if (filter.equals("Closed") && job.getStatus().equals("CLOSED")) {
+                filteredJobs.add(job);
+            }
         }
+
+        if (filteredJobs.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No positions found.", SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            emptyLabel.setForeground(new Color(150, 150, 150));
+            tablePanel.add(emptyLabel);
+        } else {
+            for (Job job : filteredJobs) {
+                JPanel rowPanel = new JPanel(new GridLayout(1, 7, 5, 0));
+                rowPanel.setBackground(Color.WHITE);
+                rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+                rowPanel.setPreferredSize(new Dimension(0, 40));
+
+                rowPanel.add(createCellLabel(job.getJobId()));
+                rowPanel.add(createCellLabel(job.getModuleCode()));
+                rowPanel.add(createCellLabel(job.getModuleName()));
+                rowPanel.add(createCellLabel(job.getMoEmail()));
+                rowPanel.add(createCellLabel(String.valueOf(job.getWeeklyHours())));
+                rowPanel.add(createCellLabel(job.getDeadline()));
+
+                String statusText = job.getStatus().equals("OPEN") ? "Open" : "Closed";
+                Color statusColor = job.getStatus().equals("OPEN") ? new Color(76, 175, 80) : new Color(150, 150, 150);
+                JLabel statusLabel = createCellLabel(statusText);
+                statusLabel.setForeground(statusColor);
+                rowPanel.add(statusLabel);
+
+                tablePanel.add(rowPanel);
+            }
+        }
+
+        tablePanel.revalidate();
+        tablePanel.repaint();
     }
 
     private void viewLogs() {
@@ -507,7 +2975,6 @@ public class DashboardFrame extends JFrame {
         logArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         logArea.setEditable(false);
 
-        // Load log file content
         try {
             File logFile = new File("logs/app.log");
             if (logFile.exists()) {
@@ -531,13 +2998,181 @@ public class DashboardFrame extends JFrame {
         scrollPane.setPreferredSize(new Dimension(600, 400));
         panel.add(scrollPane, BorderLayout.CENTER);
 
-        // Refresh button
         JPanel buttonPanel = new JPanel();
         JButton refreshBtn = UIHelper.createButton("Refresh", UIHelper.PRIMARY_COLOR);
-        refreshBtn.addActionListener(e -> viewLogs()); // Refresh by calling again
+        refreshBtn.addActionListener(e -> viewLogs());
         buttonPanel.add(refreshBtn);
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
         setContent(panel);
+    }
+
+    private void logout() {
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?", "Confirm", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            LoggerUtil.logLogout(currentUser.getEmail(), currentUser.getRole());
+            dispose();
+            new LoginFrame();
+        }
+    }
+    /**
+     * View a TA's full profile (for MO)
+     */
+    private void viewTaProfile(Profile taProfile, User taUser) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title with back button
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new BorderLayout());
+        titlePanel.setBackground(Color.WHITE);
+        titlePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel titleLabel = new JLabel("TA Profile: " + (taUser != null ? taUser.getName() : taProfile.getEmail()));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        titlePanel.add(titleLabel, BorderLayout.WEST);
+
+        JButton backBtn = UIHelper.createButton("Back to Applicants", UIHelper.SECONDARY_COLOR);
+        backBtn.addActionListener(e -> viewApplicants());
+        titlePanel.add(backBtn, BorderLayout.EAST);
+
+        panel.add(titlePanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Basic user info
+        JPanel userInfoPanel = new JPanel();
+        userInfoPanel.setLayout(new BoxLayout(userInfoPanel, BoxLayout.Y_AXIS));
+        userInfoPanel.setBackground(Color.WHITE);
+        userInfoPanel.setBorder(BorderFactory.createTitledBorder("Account Information"));
+        userInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        userInfoPanel.setMaximumSize(new Dimension(500, 120));
+
+        addInfoRow(userInfoPanel, "Name:", taUser != null ? taUser.getName() : "-");
+        addInfoRow(userInfoPanel, "Email:", taProfile.getEmail());
+        addInfoRow(userInfoPanel, "Role:", "TA");
+
+        panel.add(userInfoPanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Personal information
+        JPanel profilePanel = new JPanel();
+        profilePanel.setLayout(new BoxLayout(profilePanel, BoxLayout.Y_AXIS));
+        profilePanel.setBackground(Color.WHITE);
+        profilePanel.setBorder(BorderFactory.createTitledBorder("Personal Information"));
+        profilePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        profilePanel.setMaximumSize(new Dimension(500, 300));
+
+        addInfoRow(profilePanel, "Student ID:", taProfile.getStudentId());
+        addInfoRow(profilePanel, "Major:", taProfile.getMajor());
+        addInfoRow(profilePanel, "Grade:", taProfile.getGrade());
+        addInfoRow(profilePanel, "Phone:", taProfile.getPhone());
+        if (taProfile.getDescription() != null && !taProfile.getDescription().isEmpty()) {
+            addInfoRow(profilePanel, "Description:", taProfile.getDescription());
+        }
+
+        panel.add(profilePanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // CV section with View and Download buttons
+        JPanel cvPanel = new JPanel();
+        cvPanel.setLayout(new BoxLayout(cvPanel, BoxLayout.Y_AXIS));
+        cvPanel.setBackground(Color.WHITE);
+        cvPanel.setBorder(BorderFactory.createTitledBorder("CV / Resume"));
+        cvPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cvPanel.setMaximumSize(new Dimension(500, 120));
+
+        if (taProfile.getCvPath() != null && !taProfile.getCvPath().isEmpty()) {
+            addInfoRow(cvPanel, "CV File:", taProfile.getCvPath());
+
+            JPanel cvButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            cvButtonPanel.setBackground(Color.WHITE);
+
+            // View CV button
+            JButton viewCvBtn = UIHelper.createButton("View CV", UIHelper.PRIMARY_COLOR);
+            viewCvBtn.addActionListener(e -> viewCvFile(taProfile.getCvPath()));
+
+            // Download CV button
+            JButton downloadCvBtn = UIHelper.createButton("Download CV", UIHelper.SUCCESS_COLOR);
+            downloadCvBtn.addActionListener(e -> downloadCvFile(taProfile.getCvPath(), taProfile.getEmail()));
+
+            cvButtonPanel.add(viewCvBtn);
+            cvButtonPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+            cvButtonPanel.add(downloadCvBtn);
+
+            cvPanel.add(cvButtonPanel);
+        } else {
+            addInfoRow(cvPanel, "CV:", "Not uploaded yet");
+        }
+
+        panel.add(cvPanel);
+
+        setContent(panel);
+    }
+    /**
+     * View CV file (open PDF in system default viewer)
+     */
+    private void viewCvFile(String cvPath) {
+        File cvFile = new File(cvPath);
+        if (!cvFile.exists()) {
+            JOptionPane.showMessageDialog(this,
+                    "CV file not found at: " + cvPath + "\n\nPlease upload your CV again.",
+                    "File Not Found", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            // Open PDF with system default application
+            Desktop.getDesktop().open(cvFile);
+            LoggerUtil.logInfo("TA " + currentUser.getEmail() + " viewed CV: " + cvPath);
+        } catch (IOException e) {
+            LoggerUtil.logError("View CV", "Failed to open CV: " + e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Failed to open CV. Please make sure you have a PDF viewer installed.\n\n" +
+                            "Error: " + e.getMessage(),
+                    "Cannot Open File", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    /**
+     * Download CV file (save to user-selected location)
+     */
+    private void downloadCvFile(String sourcePath, String taEmail) {
+        File sourceFile = new File(sourcePath);
+        if (!sourceFile.exists()) {
+            JOptionPane.showMessageDialog(this,
+                    "CV file not found at: " + sourcePath + "\n\nThe TA may need to upload their CV again.",
+                    "File Not Found", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Open file chooser for save location
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save CV As");
+        fileChooser.setSelectedFile(new File(taEmail + "_CV.pdf"));
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File destFile = fileChooser.getSelectedFile();
+            // Ensure .pdf extension
+            if (!destFile.getName().toLowerCase().endsWith(".pdf")) {
+                destFile = new File(destFile.getAbsolutePath() + ".pdf");
+            }
+
+            try {
+                java.nio.file.Files.copy(sourceFile.toPath(), destFile.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                JOptionPane.showMessageDialog(this,
+                        "CV downloaded successfully to:\n" + destFile.getAbsolutePath(),
+                        "Download Complete", JOptionPane.INFORMATION_MESSAGE);
+                LoggerUtil.logInfo("MO " + currentUser.getEmail() + " downloaded CV for TA: " + taEmail);
+            } catch (IOException e) {
+                LoggerUtil.logError("Download CV", "Failed to download CV: " + e.getMessage());
+                JOptionPane.showMessageDialog(this,
+                        "Failed to download CV: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 }
