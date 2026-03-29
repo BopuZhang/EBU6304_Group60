@@ -2366,7 +2366,7 @@ public class DashboardFrame extends JFrame {
         northArea.add(titleLabel);
         northArea.add(Box.createRigidArea(new Dimension(0, 12)));
 
-        // 筛选栏 - 使用 GridBagLayout 实现自动换行
+        // 筛选栏
         JPanel filterPanel = new JPanel(new GridBagLayout());
         filterPanel.setBackground(new Color(250, 250, 250));
         filterPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -2419,7 +2419,7 @@ public class DashboardFrame extends JFrame {
         gradeFilter.setPreferredSize(new Dimension(100, 28));
         filterPanel.add(gradeFilter, gbc);
 
-        // 按钮 - 放在下一行
+        // 按钮
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.gridwidth = 2;
@@ -2447,7 +2447,6 @@ public class DashboardFrame extends JFrame {
         panel.add(northArea, BorderLayout.NORTH);
 
         // ========== 表格区域 ==========
-        // 加载数据
         List<Profile> allProfiles = FileUtil.loadProfiles();
         Map<String, Profile> profileMap = new HashMap<>();
         for (Profile p : allProfiles) {
@@ -2466,33 +2465,35 @@ public class DashboardFrame extends JFrame {
         tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
         tablePanel.setBackground(Color.WHITE);
 
-        // 表头
+        // 表头 - 固定高度
         JPanel headerPanel = new JPanel(new GridLayout(1, 5, 5, 0));
         headerPanel.setBackground(new Color(240, 240, 240));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        headerPanel.setPreferredSize(new Dimension(0, 32));
 
-        JLabel nameHeader = new JLabel("Name");
-        nameHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        JLabel nameHeader = new JLabel("Name", SwingConstants.CENTER);
+        nameHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
         nameHeader.setForeground(new Color(79, 114, 139));
         headerPanel.add(nameHeader);
 
-        JLabel idHeader = new JLabel("Student ID");
-        idHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        JLabel idHeader = new JLabel("Student ID", SwingConstants.CENTER);
+        idHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
         idHeader.setForeground(new Color(79, 114, 139));
         headerPanel.add(idHeader);
 
-        JLabel majorHeader = new JLabel("Major");
-        majorHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        JLabel majorHeader = new JLabel("Major", SwingConstants.CENTER);
+        majorHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
         majorHeader.setForeground(new Color(79, 114, 139));
         headerPanel.add(majorHeader);
 
-        JLabel gradeHeader = new JLabel("Grade");
-        gradeHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        JLabel gradeHeader = new JLabel("Grade", SwingConstants.CENTER);
+        gradeHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
         gradeHeader.setForeground(new Color(79, 114, 139));
         headerPanel.add(gradeHeader);
 
-        JLabel actionHeader = new JLabel("Action");
-        actionHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        JLabel actionHeader = new JLabel("Action", SwingConstants.CENTER);
+        actionHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
         actionHeader.setForeground(new Color(79, 114, 139));
         headerPanel.add(actionHeader);
 
@@ -2500,8 +2501,9 @@ public class DashboardFrame extends JFrame {
 
         // 刷新表格的方法
         Runnable refreshTable = () -> {
-            tablePanel.removeAll();
-            tablePanel.add(headerPanel);
+            while (tablePanel.getComponentCount() > 1) {
+                tablePanel.remove(tablePanel.getComponentCount() - 1);
+            }
 
             String searchText = searchField.getText().trim().toLowerCase();
             String selectedMajor = (String) majorFilter.getSelectedItem();
@@ -2528,10 +2530,11 @@ public class DashboardFrame extends JFrame {
             }
 
             if (filtered.isEmpty()) {
-                JLabel empty = new JLabel("No TAs found");
+                JLabel empty = new JLabel("No TAs found", SwingConstants.CENTER);
                 empty.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                 empty.setForeground(new Color(150, 150, 150));
                 empty.setAlignmentX(Component.CENTER_ALIGNMENT);
+                empty.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
                 tablePanel.add(empty);
             } else {
                 for (User user : filtered) {
@@ -2540,25 +2543,25 @@ public class DashboardFrame extends JFrame {
                     JPanel row = new JPanel(new GridLayout(1, 5, 5, 0));
                     row.setBackground(Color.WHITE);
                     row.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
-                    row.setPreferredSize(new Dimension(0, 38));
                     row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+                    row.setPreferredSize(new Dimension(0, 38));
 
-                    JLabel nameLabel = new JLabel(user.getName());
+                    JLabel nameLabel = new JLabel(user.getName(), SwingConstants.CENTER);
                     nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                     row.add(nameLabel);
 
                     String sid = (p != null && p.getStudentId() != null) ? p.getStudentId() : "-";
-                    JLabel idLabel = new JLabel(sid);
+                    JLabel idLabel = new JLabel(sid, SwingConstants.CENTER);
                     idLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                     row.add(idLabel);
 
                     String major = (p != null && p.getMajor() != null) ? p.getMajor() : "-";
-                    JLabel majorLabel = new JLabel(major);
+                    JLabel majorLabel = new JLabel(major, SwingConstants.CENTER);
                     majorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                     row.add(majorLabel);
 
                     String grade = (p != null && p.getGrade() != null) ? p.getGrade() : "-";
-                    JLabel gradeLabel = new JLabel(grade);
+                    JLabel gradeLabel = new JLabel(grade, SwingConstants.CENTER);
                     gradeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                     row.add(gradeLabel);
 
@@ -2607,13 +2610,13 @@ public class DashboardFrame extends JFrame {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(Color.WHITE);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         // 底部统计
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         bottomPanel.setBackground(new Color(250, 250, 250));
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
-        bottomPanel.add(Box.createRigidArea(new Dimension(5, 0)));
         JLabel countLabel = new JLabel("Total: " + taUsers.size() + " TAs");
         countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         countLabel.setForeground(new Color(100, 100, 100));
@@ -2654,13 +2657,11 @@ public class DashboardFrame extends JFrame {
         // Calculate workload from accepted applications
         for (Application app : allApps) {
             if (app.getStatus().equals("ACCEPTED")) {
-                // Find the job for this application
                 for (Job job : allJobs) {
                     if (job.getJobId().equals(app.getJobId())) {
                         int currentHours = workloadMap.getOrDefault(app.getTaEmail(), 0);
                         workloadMap.put(app.getTaEmail(), currentHours + job.getWeeklyHours());
 
-                        // Add job to TA's job list
                         List<Job> jobs = taJobsMap.getOrDefault(app.getTaEmail(), new ArrayList<>());
                         jobs.add(job);
                         taJobsMap.put(app.getTaEmail(), jobs);
@@ -2670,19 +2671,38 @@ public class DashboardFrame extends JFrame {
             }
         }
 
-        // Create table
+        // Create table panel
         JPanel tablePanel = new JPanel();
         tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
         tablePanel.setBackground(Color.WHITE);
 
-        // Header
+        // Header - 固定高度32px
         JPanel headerPanel = new JPanel(new GridLayout(1, 4, 5, 0));
         headerPanel.setBackground(new Color(240, 240, 240));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        headerPanel.add(createHeaderLabel("TA Name"));
-        headerPanel.add(createHeaderLabel("Email"));
-        headerPanel.add(createHeaderLabel("Total Hours"));
-        headerPanel.add(createHeaderLabel("Status"));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        headerPanel.setPreferredSize(new Dimension(0, 32));
+
+        JLabel nameHeader = new JLabel("TA Name", SwingConstants.CENTER);
+        nameHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        nameHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(nameHeader);
+
+        JLabel emailHeader = new JLabel("Email", SwingConstants.CENTER);
+        emailHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        emailHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(emailHeader);
+
+        JLabel hoursHeader = new JLabel("Total Hours", SwingConstants.CENTER);
+        hoursHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        hoursHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(hoursHeader);
+
+        JLabel statusHeader = new JLabel("Status", SwingConstants.CENTER);
+        statusHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        statusHeader.setForeground(new Color(79, 114, 139));
+        headerPanel.add(statusHeader);
+
         tablePanel.add(headerPanel);
 
         // Create list of TA workload entries and sort by hours (highest first)
@@ -2715,24 +2735,30 @@ public class DashboardFrame extends JFrame {
             String studentId = taProfile != null ? taProfile.getStudentId() : "N/A";
 
             JPanel rowPanel = new JPanel(new GridLayout(1, 4, 5, 0));
-            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+            rowPanel.setPreferredSize(new Dimension(0, 38));
             rowPanel.setBackground(Color.WHITE);
             rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
-            rowPanel.setPreferredSize(new Dimension(0, 45));
 
-            rowPanel.add(createCellLabel(name + " (" + studentId + ")"));
-            rowPanel.add(createCellLabel(email));
+            JLabel nameLabel = new JLabel(name + " (" + studentId + ")", SwingConstants.CENTER);
+            nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            rowPanel.add(nameLabel);
+
+            JLabel emailLabel = new JLabel(email, SwingConstants.CENTER);
+            emailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            rowPanel.add(emailLabel);
 
             // Hours with color coding
-            JLabel hoursLabel = createCellLabel(hours + " hrs/week");
+            JLabel hoursLabel = new JLabel(hours + " hrs/week", SwingConstants.CENTER);
+            hoursLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             if (hours > 15) {
-                hoursLabel.setForeground(new Color(244, 67, 54)); // Red - overloaded
+                hoursLabel.setForeground(new Color(244, 67, 54));
             } else if (hours > 10) {
-                hoursLabel.setForeground(new Color(255, 152, 0)); // Orange - heavy
+                hoursLabel.setForeground(new Color(255, 152, 0));
             } else if (hours > 5) {
-                hoursLabel.setForeground(new Color(76, 175, 80)); // Green - moderate
+                hoursLabel.setForeground(new Color(76, 175, 80));
             } else {
-                hoursLabel.setForeground(new Color(150, 150, 150)); // Gray - light
+                hoursLabel.setForeground(new Color(150, 150, 150));
             }
             rowPanel.add(hoursLabel);
 
@@ -2753,7 +2779,8 @@ public class DashboardFrame extends JFrame {
                 statusColor = new Color(150, 150, 150);
             }
 
-            JLabel statusLabel = createCellLabel(statusText);
+            JLabel statusLabel = new JLabel(statusText, SwingConstants.CENTER);
+            statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             statusLabel.setForeground(statusColor);
             rowPanel.add(statusLabel);
 
@@ -2765,7 +2792,7 @@ public class DashboardFrame extends JFrame {
                     showTaJobDetails(finalEmail, finalTaJobsMap.get(finalEmail));
                 }
                 public void mouseEntered(java.awt.event.MouseEvent evt) {
-                    rowPanel.setBackground(new Color(240, 240, 240));
+                    rowPanel.setBackground(new Color(245, 245, 245));
                 }
                 public void mouseExited(java.awt.event.MouseEvent evt) {
                     rowPanel.setBackground(Color.WHITE);
@@ -2779,13 +2806,14 @@ public class DashboardFrame extends JFrame {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(Color.WHITE);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         // Add summary panel at bottom
-        JPanel summaryPanel = new JPanel();
-        summaryPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        summaryPanel.setBackground(Color.WHITE);
+        JPanel summaryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        summaryPanel.setBackground(new Color(250, 250, 250));
         summaryPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
+        summaryPanel.add(Box.createRigidArea(new Dimension(5, 8)));
 
         int totalHours = 0;
         int activeTAs = 0;
@@ -2796,9 +2824,10 @@ public class DashboardFrame extends JFrame {
             if (hours > 15) overloadedTAs++;
         }
 
-        summaryPanel.add(new JLabel("Summary: " + activeTAs + " active TAs | "));
-        summaryPanel.add(new JLabel("Total workload: " + totalHours + " hrs/week | "));
-        summaryPanel.add(new JLabel("Overloaded: " + overloadedTAs + " TAs"));
+        JLabel summaryLabel = new JLabel("Summary: " + activeTAs + " active TAs | Total workload: " + totalHours + " hrs/week | Overloaded: " + overloadedTAs + " TAs");
+        summaryLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        summaryLabel.setForeground(new Color(100, 100, 100));
+        summaryPanel.add(summaryLabel);
 
         panel.add(summaryPanel, BorderLayout.SOUTH);
 
