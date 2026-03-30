@@ -23,7 +23,7 @@ public class DashboardFrame extends JFrame {
         this.users = users;
 
         setTitle("TA Recruitment System - " + user.getRole() + " Dashboard");
-        setSize(900, 650);
+        setSize(1000, 650);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);

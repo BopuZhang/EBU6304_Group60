@@ -4,19 +4,30 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
+/**
+ * Registration window for the TA Recruitment System.
+ * Allows a user to create a new account.
+ */
 public class RegisterFrame extends JFrame {
     private JTextField emailField;
     private JPasswordField passwordField;
     private JPasswordField confirmPasswordField;
+    private JToggleButton passwordToggleBtn;
+    private JToggleButton confirmToggleBtn;
     private JTextField nameField;
     private JComboBox<String> roleCombo;
     private List<User> users;
 
+    /**
+     * Constructs the registration frame.
+     *
+     * @param users the list of existing users (passed from the main application)
+     */
     public RegisterFrame(List<User> users) {
         this.users = users;
 
         setTitle("Register - TA Recruitment System");
-        setSize(450, 550);
+        setSize(600, 550);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -24,6 +35,56 @@ public class RegisterFrame extends JFrame {
         setVisible(true);
     }
 
+    /**
+     * Creates a password field with an eye toggle button.
+     *
+     * @param field   the password field to be decorated
+     * @param toggle  the toggle button that controls visibility
+     * @return a panel containing the password field and the toggle button
+     */
+    private JPanel createPasswordPanel(JPasswordField field, JToggleButton toggle) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setPreferredSize(new Dimension(250, 35));
+        field.setEchoChar('●');  // bullet character
+
+        // Set a font that supports emojis (adjust as needed for your OS)
+        Font emojiFont = new Font("Segoe UI Emoji", Font.PLAIN, 16);
+        toggle.setFont(emojiFont);
+        toggle.setFocusPainted(false);
+        toggle.setBorderPainted(false);
+        toggle.setContentAreaFilled(false);
+        toggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Define emoji for open and closed states
+        final String OPEN_EYE = "👁️";      // open eye
+        final String CLOSED_EYE = "\uD83D\uDE48";  // close eye
+
+        // Initially set closed eye (password hidden)
+        toggle.setText(CLOSED_EYE);
+        toggle.setSelected(false);
+
+        toggle.addActionListener(e -> {
+            boolean show = toggle.isSelected();
+            if (show) {
+                toggle.setText(OPEN_EYE);   // show open eye
+                field.setEchoChar((char) 0); // display plain text
+            } else {
+                toggle.setText(CLOSED_EYE); // show closed eye
+                field.setEchoChar('●');      // mask with bullet
+            }
+        });
+
+        panel.add(field, BorderLayout.CENTER);
+        panel.add(toggle, BorderLayout.EAST);
+        return panel;
+    }
+
+    /**
+     * Initializes the user interface components.
+     */
     private void initUI() {
         JPanel mainPanel = new JPanel();
         mainPanel.setBackground(new Color(245, 245, 245));
@@ -32,6 +93,7 @@ public class RegisterFrame extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 15, 15, 15);
 
+        // Card panel with white background and padding
         JPanel cardPanel = new JPanel();
         cardPanel.setBackground(Color.WHITE);
         cardPanel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
@@ -56,7 +118,7 @@ public class RegisterFrame extends JFrame {
         cardGbc.gridwidth = 1;
         cardGbc.anchor = GridBagConstraints.WEST;
 
-        // Email
+        // Email field
         JLabel emailLabel = new JLabel("Email Address");
         emailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cardGbc.gridy = row;
@@ -70,7 +132,7 @@ public class RegisterFrame extends JFrame {
         cardPanel.add(emailField, cardGbc);
         row++;
 
-        // Password
+        // Password field with eye toggle
         JLabel passwordLabel = new JLabel("Password");
         passwordLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cardGbc.gridy = row;
@@ -78,13 +140,13 @@ public class RegisterFrame extends JFrame {
         cardPanel.add(passwordLabel, cardGbc);
 
         passwordField = new JPasswordField();
-        passwordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        passwordField.setPreferredSize(new Dimension(250, 35));
+        passwordToggleBtn = new JToggleButton();
+        JPanel passwordPanel = createPasswordPanel(passwordField, passwordToggleBtn);
         cardGbc.gridx = 1;
-        cardPanel.add(passwordField, cardGbc);
+        cardPanel.add(passwordPanel, cardGbc);
         row++;
 
-        // Confirm Password
+        // Confirm Password field with eye toggle
         JLabel confirmLabel = new JLabel("Confirm Password");
         confirmLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cardGbc.gridy = row;
@@ -92,13 +154,13 @@ public class RegisterFrame extends JFrame {
         cardPanel.add(confirmLabel, cardGbc);
 
         confirmPasswordField = new JPasswordField();
-        confirmPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        confirmPasswordField.setPreferredSize(new Dimension(250, 35));
+        confirmToggleBtn = new JToggleButton();
+        JPanel confirmPanel = createPasswordPanel(confirmPasswordField, confirmToggleBtn);
         cardGbc.gridx = 1;
-        cardPanel.add(confirmPasswordField, cardGbc);
+        cardPanel.add(confirmPanel, cardGbc);
         row++;
 
-        // Full Name
+        // Full Name field
         JLabel nameLabel = new JLabel("Full Name");
         nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cardGbc.gridy = row;
@@ -112,7 +174,7 @@ public class RegisterFrame extends JFrame {
         cardPanel.add(nameField, cardGbc);
         row++;
 
-        // Role
+        // Role selection
         JLabel roleLabel = new JLabel("Role");
         roleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cardGbc.gridy = row;
@@ -126,7 +188,7 @@ public class RegisterFrame extends JFrame {
         cardPanel.add(roleCombo, cardGbc);
         row++;
 
-        // Button panel
+        // Button panel with Register and Back buttons
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new GridLayout(1, 2, 15, 0));
@@ -149,7 +211,7 @@ public class RegisterFrame extends JFrame {
         backBtn.setOpaque(true);
         backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Hover effect
+        // Hover effects
         registerBtn.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 registerBtn.setBackground(new Color(56, 155, 60));
@@ -171,19 +233,22 @@ public class RegisterFrame extends JFrame {
         buttonPanel.add(registerBtn);
         buttonPanel.add(backBtn);
 
+        // Add button panel to the card
         cardGbc.gridy = row;
         cardGbc.gridx = 0;
         cardGbc.gridwidth = 2;
         cardGbc.fill = GridBagConstraints.HORIZONTAL;
         cardPanel.add(buttonPanel, cardGbc);
 
-        // Register event
+        // Register button action
         registerBtn.addActionListener(e -> register());
+        // Back button action: close this frame and open login frame
         backBtn.addActionListener(e -> {
             dispose();
             new LoginFrame();
         });
 
+        // Place the card panel into the main panel
         gbc.gridx = 0;
         gbc.gridy = 0;
         mainPanel.add(cardPanel, gbc);
@@ -192,18 +257,24 @@ public class RegisterFrame extends JFrame {
     }
 
     /**
-     * Validate email format
+     * Validates the email format using a regular expression.
+     *
+     * @param email the email string to validate
+     * @return true if the email format is valid, false otherwise
      */
     private boolean isValidEmail(String email) {
         if (email == null || email.isEmpty()) {
             return false;
         }
-        // Email regex pattern: username@domain.com
-        // Must contain @ and . after @
+        // Email regex: username@domain.tld
         String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
         return email.matches(emailRegex);
     }
 
+    /**
+     * Handles the registration process: validates input, creates a new user,
+     * saves to file, logs the action, and opens the login frame.
+     */
     private void register() {
         String email = emailField.getText().trim();
         String password = new String(passwordField.getPassword());
@@ -211,31 +282,31 @@ public class RegisterFrame extends JFrame {
         String name = nameField.getText().trim();
         String role = (String) roleCombo.getSelectedItem();
 
-        // Validation - Empty fields
+        // Check for empty fields
         if (email.isEmpty() || password.isEmpty() || name.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill in all fields", "Warning", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Email format validation
+        // Validate email format
         if (!isValidEmail(email)) {
             JOptionPane.showMessageDialog(this, "Please enter a valid email address (e.g., name@domain.com)", "Invalid Email", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Password match validation
+        // Check if passwords match
         if (!password.equals(confirmPassword)) {
             JOptionPane.showMessageDialog(this, "Passwords do not match", "Warning", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Password length validation
+        // Validate password length
         if (password.length() < 8) {
             JOptionPane.showMessageDialog(this, "Password must be at least 8 characters", "Warning", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Check if email already exists
+        // Check for duplicate email
         for (User user : users) {
             if (user.getEmail().equals(email)) {
                 JOptionPane.showMessageDialog(this, "Email already registered", "Warning", JOptionPane.WARNING_MESSAGE);
@@ -243,12 +314,12 @@ public class RegisterFrame extends JFrame {
             }
         }
 
-        // Create new user
+        // Create and add the new user
         User newUser = new User(email, password, role, name);
         users.add(newUser);
         FileUtil.saveUsers(users);
 
-        // Log successful registration
+        // Log the registration
         LoggerUtil.logRegistration(email, role);
         LoggerUtil.logCreate("User", email + " (" + role + ")");
 
