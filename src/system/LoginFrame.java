@@ -126,7 +126,7 @@ public class LoginFrame extends JFrame {
         cardPanel.add(emailField, cardGbc);
         y++;
 
-        // Password with toggle (only this part changed)
+        // Password with toggle
         JLabel passwordLabel = new JLabel("Password");
         passwordLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cardGbc.gridy = y;
@@ -140,7 +140,7 @@ public class LoginFrame extends JFrame {
         cardPanel.add(passwordPanel, cardGbc);
         y++;
 
-        // Button panel (unchanged)
+        // Button panel (Login & Register)
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new GridLayout(1, 2, 15, 0));
@@ -156,6 +156,26 @@ public class LoginFrame extends JFrame {
         cardGbc.gridwidth = 2;
         cardGbc.fill = GridBagConstraints.HORIZONTAL;
         cardPanel.add(buttonPanel, cardGbc);
+        y++;
+
+        // Forgot Password button (no functionality yet)
+        JButton forgotPasswordBtn = new JButton("Forgot Password?");
+        forgotPasswordBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        forgotPasswordBtn.setForeground(new Color(79, 114, 139));
+        forgotPasswordBtn.setBorderPainted(false);
+        forgotPasswordBtn.setContentAreaFilled(false);
+        forgotPasswordBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        forgotPasswordBtn.addActionListener(e -> {
+            // TODO: Implement forgot password functionality later
+            JOptionPane.showMessageDialog(this, "Feature coming soon!", "Info", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        cardGbc.gridy = y;
+        cardGbc.gridx = 0;
+        cardGbc.gridwidth = 2;
+        cardGbc.anchor = GridBagConstraints.CENTER;
+        cardGbc.fill = GridBagConstraints.NONE;
+        cardPanel.add(forgotPasswordBtn, cardGbc);
         y++;
 
         // Login event (unchanged)
