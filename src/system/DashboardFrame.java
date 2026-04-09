@@ -1188,428 +1188,377 @@ public class DashboardFrame extends JFrame {
         // Load initial applicants
         refreshApplicantsView(panel, jobCombo);
     }
-    private void postJob() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+   /**
+ * MO-01 Post Position
+ * 发布助教岗位
+ */
+private void postJob() {
+    JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    panel.setBackground(Color.WHITE);
+    panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Title
-        JLabel titleLabel = new JLabel("Post New Position");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(titleLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+    JLabel titleLabel = new JLabel("Post New Position");
+    titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+    titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+    titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    panel.add(titleLabel);
+    panel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Form fields - 使用更大的尺寸
-        JPanel formPanel = new JPanel();
-        formPanel.setLayout(new GridBagLayout());
-        formPanel.setBackground(Color.WHITE);
-        formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JPanel formPanel = new JPanel();
+    formPanel.setLayout(new GridBagLayout());
+    formPanel.setBackground(Color.WHITE);
+    formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);  // 增加间距
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 10, 10);
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        int row = 0;
+    int row = 0;
 
-        // Module Code - 增大宽度
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        JLabel moduleCodeLabel = new JLabel("Module Code:");
-        moduleCodeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        moduleCodeLabel.setPreferredSize(new Dimension(150, 30));
-        formPanel.add(moduleCodeLabel, gbc);
+    // Module Code
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    JLabel moduleCodeLabel = new JLabel("Module Code:");
+    moduleCodeLabel.setPreferredSize(new Dimension(150, 30));
+    formPanel.add(moduleCodeLabel, gbc);
 
-        JTextField moduleCodeField = new JTextField(25);
-        moduleCodeField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        moduleCodeField.setPreferredSize(new Dimension(350, 35));
-        gbc.gridx = 1;
-        formPanel.add(moduleCodeField, gbc);
-        row++;
+    JTextField moduleCodeField = new JTextField(25);
+    moduleCodeField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    moduleCodeField.setPreferredSize(new Dimension(350, 35));
+    gbc.gridx = 1;
+    formPanel.add(moduleCodeField, gbc);
+    row++;
 
-        // Module Name
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        JLabel moduleNameLabel = new JLabel("Module Name:");
-        moduleNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        moduleNameLabel.setPreferredSize(new Dimension(150, 30));
-        formPanel.add(moduleNameLabel, gbc);
+    // Module Name
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    JLabel moduleNameLabel = new JLabel("Module Name:");
+    moduleNameLabel.setPreferredSize(new Dimension(150, 30));
+    formPanel.add(moduleNameLabel, gbc);
 
-        JTextField moduleNameField = new JTextField(25);
-        moduleNameField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        moduleNameField.setPreferredSize(new Dimension(350, 35));
-        gbc.gridx = 1;
-        formPanel.add(moduleNameField, gbc);
-        row++;
+    JTextField moduleNameField = new JTextField(25);
+    moduleNameField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    moduleNameField.setPreferredSize(new Dimension(350, 35));
+    gbc.gridx = 1;
+    formPanel.add(moduleNameField, gbc);
+    row++;
 
-        // Description - 增大文本区域
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        JLabel descLabel = new JLabel("Description:");
-        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        descLabel.setPreferredSize(new Dimension(150, 30));
-        formPanel.add(descLabel, gbc);
+    // Description
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    JLabel descLabel = new JLabel("Description:");
+    descLabel.setPreferredSize(new Dimension(150, 30));
+    formPanel.add(descLabel, gbc);
 
-        JTextArea descArea = new JTextArea(4, 30);
-        descArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        descArea.setLineWrap(true);
-        descArea.setWrapStyleWord(true);
-        JScrollPane descScroll = new JScrollPane(descArea);
-        descScroll.setPreferredSize(new Dimension(350, 80));
-        descScroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-        gbc.gridx = 1;
-        formPanel.add(descScroll, gbc);
-        row++;
+    JTextArea descArea = new JTextArea(4, 30);
+    descArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    descArea.setLineWrap(true);
+    descArea.setWrapStyleWord(true);
+    JScrollPane descScroll = new JScrollPane(descArea);
+    descScroll.setPreferredSize(new Dimension(350, 80));
+    descScroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+    gbc.gridx = 1;
+    formPanel.add(descScroll, gbc);
+    row++;
 
-        // Weekly Hours
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        JLabel hoursLabel = new JLabel("Weekly Hours (1-20):");
-        hoursLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        hoursLabel.setPreferredSize(new Dimension(150, 30));
-        formPanel.add(hoursLabel, gbc);
+    // Weekly Hours
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    JLabel hoursLabel = new JLabel("Weekly Hours (1-20):");
+    hoursLabel.setPreferredSize(new Dimension(150, 30));
+    formPanel.add(hoursLabel, gbc);
 
-        JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 20, 1));
-        hoursSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        hoursSpinner.setPreferredSize(new Dimension(100, 35));
-        gbc.gridx = 1;
-        formPanel.add(hoursSpinner, gbc);
-        row++;
+    JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 20, 1));
+    hoursSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    hoursSpinner.setPreferredSize(new Dimension(100, 35));
+    gbc.gridx = 1;
+    formPanel.add(hoursSpinner, gbc);
+    row++;
 
-        // Applicant Limit
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        JLabel limitLabel = new JLabel("Applicant Limit:");
-        limitLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        limitLabel.setPreferredSize(new Dimension(150, 30));
-        formPanel.add(limitLabel, gbc);
+    // Applicant Limit
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    JLabel limitLabel = new JLabel("Applicant Limit:");
+    limitLabel.setPreferredSize(new Dimension(150, 30));
+    formPanel.add(limitLabel, gbc);
 
-        JPanel limitPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        limitPanel.setBackground(Color.WHITE);
+    JPanel limitPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    limitPanel.setBackground(Color.WHITE);
 
-        JSpinner limitSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 50, 1));
-        limitSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        limitSpinner.setPreferredSize(new Dimension(100, 35));
-        limitPanel.add(limitSpinner);
+    JSpinner limitSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 50, 1));
+    limitSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    limitSpinner.setPreferredSize(new Dimension(100, 35));
+    limitPanel.add(limitSpinner);
 
-        JLabel limitHint = new JLabel("(Number of TAs to hire)");
-        limitHint.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        limitHint.setForeground(new Color(150, 150, 150));
-        limitPanel.add(limitHint);
+    JLabel limitHint = new JLabel("(Number of TAs to hire)");
+    limitHint.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+    limitHint.setForeground(new Color(150, 150, 150));
+    limitPanel.add(limitHint);
 
-        gbc.gridx = 1;
-        formPanel.add(limitPanel, gbc);
-        row++;
+    gbc.gridx = 1;
+    formPanel.add(limitPanel, gbc);
+    row++;
 
-        // Deadline
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        JLabel deadlineLabel = new JLabel("Deadline (YYYY-MM-DD):");
-        deadlineLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        deadlineLabel.setPreferredSize(new Dimension(150, 30));
-        formPanel.add(deadlineLabel, gbc);
+    // Deadline
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    JLabel deadlineLabel = new JLabel("Deadline (YYYY-MM-DD):");
+    deadlineLabel.setPreferredSize(new Dimension(150, 30));
+    formPanel.add(deadlineLabel, gbc);
 
-        JTextField deadlineField = new JTextField(15);
-        deadlineField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        deadlineField.setPreferredSize(new Dimension(200, 35));
-        deadlineField.setToolTipText("Format: 2024-12-31");
-        gbc.gridx = 1;
-        formPanel.add(deadlineField, gbc);
-        row++;
+    JTextField deadlineField = new JTextField(15);
+    deadlineField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    deadlineField.setPreferredSize(new Dimension(200, 35));
+    deadlineField.setToolTipText("Format: 2025-12-31");
+    gbc.gridx = 1;
+    formPanel.add(deadlineField, gbc);
+    row++;
 
-        // Requirements - 增大文本区域
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        JLabel reqLabel = new JLabel("Requirements:");
-        reqLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        reqLabel.setPreferredSize(new Dimension(150, 30));
-        formPanel.add(reqLabel, gbc);
+    // Requirements
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    JLabel reqLabel = new JLabel("Requirements:");
+    reqLabel.setPreferredSize(new Dimension(150, 30));
+    formPanel.add(reqLabel, gbc);
 
-        JTextArea reqArea = new JTextArea(4, 30);
-        reqArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        reqArea.setLineWrap(true);
-        reqArea.setWrapStyleWord(true);
-        JScrollPane reqScroll = new JScrollPane(reqArea);
-        reqScroll.setPreferredSize(new Dimension(350, 80));
-        reqScroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-        gbc.gridx = 1;
-        formPanel.add(reqScroll, gbc);
-        row++;
+    JTextArea reqArea = new JTextArea(4, 30);
+    reqArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    reqArea.setLineWrap(true);
+    reqArea.setWrapStyleWord(true);
+    JScrollPane reqScroll = new JScrollPane(reqArea);
+    reqScroll.setPreferredSize(new Dimension(350, 80));
+    reqScroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+    gbc.gridx = 1;
+    formPanel.add(reqScroll, gbc);
+    row++;
 
-        panel.add(formPanel);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+    panel.add(formPanel);
+    panel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Buttons
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        buttonPanel.setBackground(Color.WHITE);
-        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    // Buttons
+    JPanel buttonPanel = new JPanel();
+    buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+    buttonPanel.setBackground(Color.WHITE);
+    buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton submitBtn = UIHelper.createButton("Post Position", UIHelper.SUCCESS_COLOR);
-        submitBtn.setPreferredSize(new Dimension(150, 40));
-        submitBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+    JButton submitBtn = UIHelper.createButton("Post Position", UIHelper.SUCCESS_COLOR);
+    submitBtn.setPreferredSize(new Dimension(150, 40));
+    submitBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
 
-        JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
-        cancelBtn.setPreferredSize(new Dimension(120, 40));
-        cancelBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+    JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
+    cancelBtn.setPreferredSize(new Dimension(120, 40));
+    cancelBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
 
-        submitBtn.addActionListener(e -> {
-            // Validation
-            String moduleCode = moduleCodeField.getText().trim();
-            String moduleName = moduleNameField.getText().trim();
-            String description = descArea.getText().trim();
-            int hours = (int) hoursSpinner.getValue();
-            int limit = (int) limitSpinner.getValue();
-            String deadline = deadlineField.getText().trim();
-            String requirements = reqArea.getText().trim();
+    submitBtn.addActionListener(e -> {
+        // 输入非空校验
+        String moduleCode = moduleCodeField.getText().trim();
+        String moduleName = moduleNameField.getText().trim();
+        String description = descArea.getText().trim();
+        int hours = (int) hoursSpinner.getValue();
+        int limit = (int) limitSpinner.getValue();
+        String deadline = deadlineField.getText().trim();
+        String requirements = reqArea.getText().trim();
 
-            if (moduleCode.isEmpty() || moduleName.isEmpty() || description.isEmpty() || deadline.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in all required fields", "Warning", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // Validate deadline format
-            if (!deadline.matches("\\d{4}-\\d{2}-\\d{2}")) {
-                JOptionPane.showMessageDialog(this, "Deadline must be in format YYYY-MM-DD", "Warning", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // Generate Job ID
-            String jobId = "JOB" + System.currentTimeMillis();
-
-            // Create job
-            Job newJob = new Job(jobId, currentUser.getEmail(), moduleCode, moduleName,
-                    description, hours, deadline, requirements, "OPEN", limit);
-
-            // Save to file
-            List<Job> jobs = FileUtil.loadJobs();
-            jobs.add(newJob);
-            FileUtil.saveJobs(jobs);
-
-            // Log
-            LoggerUtil.logCreate("Job", jobId + " - " + moduleCode + " (Limit: " + limit + ")");
-
-            JOptionPane.showMessageDialog(this,
-                    "Position posted successfully!\n\n" +
-                            "Job ID: " + jobId + "\n" +
-                            "Module: " + moduleCode + " - " + moduleName + "\n" +
-                            "Applicant Limit: " + limit,
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
-
-            // Clear form
-            moduleCodeField.setText("");
-            moduleNameField.setText("");
-            descArea.setText("");
-            hoursSpinner.setValue(5);
-            limitSpinner.setValue(5);
-            deadlineField.setText("");
-            reqArea.setText("");
-
-            // Refresh view
-            viewMyJobs();
-        });
-
-        cancelBtn.addActionListener(e -> viewMyJobs());
-
-        buttonPanel.add(submitBtn);
-        buttonPanel.add(cancelBtn);
-        panel.add(buttonPanel);
-
-        setContent(panel);
-    }
-    /**
-     * View jobs posted by the current MO (with edit, delete, toggle status, and applicant count)
-     */
-    private void viewMyJobs() {
-        List<Job> allJobs = FileUtil.loadJobs();
-        List<Job> myJobs = new ArrayList<>();
-
-        for (Job job : allJobs) {
-            if (job.getMoEmail().equals(currentUser.getEmail())) {
-                myJobs.add(job);
-            }
-        }
-
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout());
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        // Title and buttons
-        JPanel topPanel = new JPanel();
-        topPanel.setLayout(new BorderLayout());
-        topPanel.setBackground(Color.WHITE);
-
-        JLabel titleLabel = new JLabel("My Posted Positions");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
-        topPanel.add(titleLabel, BorderLayout.WEST);
-
-        JButton newBtn = UIHelper.createButton("+ New Position", UIHelper.SUCCESS_COLOR);
-        newBtn.addActionListener(e -> postJob());
-        topPanel.add(newBtn, BorderLayout.EAST);
-
-        panel.add(topPanel, BorderLayout.NORTH);
-
-        if (myJobs.isEmpty()) {
-            JLabel emptyLabel = new JLabel("You haven't posted any positions yet. Click 'New Position' to create one.", SwingConstants.CENTER);
-            emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
-            panel.add(emptyLabel, BorderLayout.CENTER);
-            setContent(panel);
+        if (moduleCode.isEmpty() || moduleName.isEmpty() || description.isEmpty() || deadline.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All required fields must be filled!", "Warning", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Sort by deadline
-        myJobs.sort((j1, j2) -> j1.getDeadline().compareTo(j2.getDeadline()));
-
-        // Load all applications once for efficiency
-        List<Application> allApps = FileUtil.loadApplications();
-
-        // 使用 JTable 确保对齐
-        String[] columnNames = {"Job ID", "Module Code", "Module Name", "Weekly Hours", "Deadline", "Applicants", "Status", "Action"};
-
-        Object[][] data = new Object[myJobs.size()][8];
-
-        for (int i = 0; i < myJobs.size(); i++) {
-            Job job = myJobs.get(i);
-            int acceptedCount = (int) allApps.stream()
-                    .filter(app -> app.getJobId().equals(job.getJobId()) && "ACCEPTED".equals(app.getStatus()))
-                    .count();
-
-            data[i][0] = job.getJobId();
-            data[i][1] = job.getModuleCode();
-            data[i][2] = job.getModuleName();
-            data[i][3] = String.valueOf(job.getWeeklyHours());
-            data[i][4] = job.getDeadline();
-
-            // Applicants with color indicator
-            String applicantsText = acceptedCount + " / " + job.getApplicantLimit();
-            String applicantsColor = acceptedCount >= job.getApplicantLimit() ? "#F44336" : "#4CAF50";
-            data[i][5] = "<html><font color='" + applicantsColor + "'>" + applicantsText + "</font></html>";
-
-            // Status with color
-            String statusText = "OPEN".equals(job.getStatus()) ? "Open ✓" : "Closed";
-            String statusColor = "OPEN".equals(job.getStatus()) ? "#4CAF50" : "#969696";
-            data[i][6] = "<html><font color='" + statusColor + "'>" + statusText + "</font></html>";
-
-            // Store job object for action buttons
-            data[i][7] = job;
+        // 日期格式校验
+        if (!deadline.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            JOptionPane.showMessageDialog(this, "Deadline format must be YYYY-MM-DD", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
         }
 
-        // 创建表格模型
-        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(data, columnNames) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return column == 7; // 只有Action列可编辑（用于按钮）
-            }
+        // 构建职位对象
+        String jobId = "JOB" + System.currentTimeMillis();
+        Job newJob = new Job(
+                jobId,
+                currentUser.getEmail(),
+                moduleCode,
+                moduleName,
+                description,
+                hours,
+                deadline,
+                requirements,
+                "OPEN",
+                limit
+        );
 
-            @Override
-            public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 7) {
-                    return Job.class;
-                }
-                return String.class;
-            }
-        };
+        // 保存文件
+        List<Job> jobs = FileUtil.loadJobs();
+        jobs.add(newJob);
+        FileUtil.saveJobs(jobs);
 
-        JTable table = new JTable(model);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        table.setRowHeight(65); // 增加行高确保按钮完整显示
-        table.setShowGrid(false);
-        table.setIntercellSpacing(new Dimension(0, 0));
-        table.setBorder(BorderFactory.createEmptyBorder());
+        // 日志
+        LoggerUtil.logCreate("Job", jobId + " | " + moduleCode);
 
-        // 关键：关闭自动调整列宽，这样才能出现水平滚动条
-        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        JOptionPane.showMessageDialog(this,
+                "Position posted successfully!\n\n" +
+                "Job ID: " + jobId + "\n" +
+                "Module: " + moduleCode + " - " + moduleName,
+                "Success", JOptionPane.INFORMATION_MESSAGE);
 
-        // 设置表头样式 - 居中显示
-        javax.swing.table.JTableHeader header = table.getTableHeader();
-        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        header.setBackground(new Color(240, 240, 240));
-        header.setForeground(new Color(79, 114, 139));
-        header.setPreferredSize(new Dimension(header.getWidth(), 45));
-        header.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        // 清空表单
+        moduleCodeField.setText("");
+        moduleNameField.setText("");
+        descArea.setText("");
+        hoursSpinner.setValue(5);
+        limitSpinner.setValue(5);
+        deadlineField.setText("");
+        reqArea.setText("");
 
-        // 设置表头渲染器，使所有列名居中
-        javax.swing.table.DefaultTableCellRenderer headerRenderer = new javax.swing.table.DefaultTableCellRenderer();
-        headerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+        viewMyJobs();
+    });
+
+    cancelBtn.addActionListener(e -> viewMyJobs());
+
+    buttonPanel.add(submitBtn);
+    buttonPanel.add(cancelBtn);
+    panel.add(buttonPanel);
+
+    setContent(panel);
+}
+   /**
+ * MO-02 View Positions I've Posted
+ * 查看我发布的所有职位
+ */
+private void viewMyJobs() {
+    List<Job> allJobs = FileUtil.loadJobs();
+    List<Job> myJobs = new ArrayList<>();
+
+    for (Job job : allJobs) {
+        if (job.getMoEmail().equals(currentUser.getEmail())) {
+            myJobs.add(job);
         }
-
-        // 设置列宽 - 确保所有列都有足够宽度
-        table.getColumnModel().getColumn(0).setPreferredWidth(100);
-        table.getColumnModel().getColumn(0).setMinWidth(90);
-        table.getColumnModel().getColumn(0).setMaxWidth(120);
-
-        table.getColumnModel().getColumn(1).setPreferredWidth(110);
-        table.getColumnModel().getColumn(1).setMinWidth(100);
-        table.getColumnModel().getColumn(1).setMaxWidth(150);
-
-        table.getColumnModel().getColumn(2).setPreferredWidth(200);
-        table.getColumnModel().getColumn(2).setMinWidth(150);
-        table.getColumnModel().getColumn(2).setMaxWidth(300);
-
-        table.getColumnModel().getColumn(3).setPreferredWidth(100);
-        table.getColumnModel().getColumn(3).setMinWidth(90);
-        table.getColumnModel().getColumn(3).setMaxWidth(120);
-
-        table.getColumnModel().getColumn(4).setPreferredWidth(110);
-        table.getColumnModel().getColumn(4).setMinWidth(100);
-        table.getColumnModel().getColumn(4).setMaxWidth(150);
-
-        table.getColumnModel().getColumn(5).setPreferredWidth(100);
-        table.getColumnModel().getColumn(5).setMinWidth(90);
-        table.getColumnModel().getColumn(5).setMaxWidth(120);
-
-        table.getColumnModel().getColumn(6).setPreferredWidth(80);
-        table.getColumnModel().getColumn(6).setMinWidth(70);
-        table.getColumnModel().getColumn(6).setMaxWidth(100);
-
-        table.getColumnModel().getColumn(7).setPreferredWidth(200);
-        table.getColumnModel().getColumn(7).setMinWidth(180);
-        table.getColumnModel().getColumn(7).setMaxWidth(250);
-
-        // 设置单元格渲染器支持HTML并居中
-        table.setDefaultRenderer(String.class, new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public java.awt.Component getTableCellRendererComponent(JTable table, Object value,
-                                                                    boolean isSelected, boolean hasFocus, int row, int column) {
-                java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                setHorizontalAlignment(SwingConstants.CENTER);
-                setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
-                if (!isSelected) {
-                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
-                }
-                return c;
-            }
-        });
-
-        // 为Action列设置按钮渲染器和编辑器
-        table.getColumnModel().getColumn(7).setCellRenderer(new ButtonRenderer());
-        table.getColumnModel().getColumn(7).setCellEditor(new ButtonEditor(new JCheckBox(), this, allApps));
-
-        // 创建外层面板用于滚动
-        JPanel tableWrapper = new JPanel(new BorderLayout());
-        tableWrapper.setBackground(Color.WHITE);
-
-        // 添加滚动条 - 同时支持水平和垂直滚动
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getViewport().setBackground(Color.WHITE);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(20);
-
-        tableWrapper.add(scrollPane, BorderLayout.CENTER);
-        panel.add(tableWrapper, BorderLayout.CENTER);
-        setContent(panel);
     }
+
+    JPanel panel = new JPanel();
+    panel.setLayout(new BorderLayout());
+    panel.setBackground(Color.WHITE);
+    panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+    // Top title bar
+    JPanel topPanel = new JPanel();
+    topPanel.setLayout(new BorderLayout());
+    topPanel.setBackground(Color.WHITE);
+
+    JLabel titleLabel = new JLabel("My Posted Positions");
+    titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+    titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+    topPanel.add(titleLabel, BorderLayout.WEST);
+
+    JButton newBtn = UIHelper.createButton("+ New Position", UIHelper.SUCCESS_COLOR);
+    newBtn.addActionListener(e -> postJob());
+    topPanel.add(newBtn, BorderLayout.EAST);
+
+    panel.add(topPanel, BorderLayout.NORTH);
+
+    if (myJobs.isEmpty()) {
+        JLabel emptyLabel = new JLabel("You have not posted any positions yet.", SwingConstants.CENTER);
+        emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        emptyLabel.setForeground(new Color(150, 150, 150));
+        panel.add(emptyLabel, BorderLayout.CENTER);
+        setContent(panel);
+        return;
+    }
+
+    // 按截止时间排序
+    myJobs.sort(Comparator.comparing(Job::getDeadline));
+    List<Application> allApps = FileUtil.loadApplications();
+
+    String[] columnNames = {
+            "Job ID", "Module Code", "Module Name", "Weekly Hours",
+            "Deadline", "Applicants", "Status", "Action"
+    };
+
+    Object[][] data = new Object[myJobs.size()][8];
+
+    for (int i = 0; i < myJobs.size(); i++) {
+        Job job = myJobs.get(i);
+        long acceptedCount = allApps.stream()
+                .filter(app -> app.getJobId().equals(job.getJobId()) && "ACCEPTED".equals(app.getStatus()))
+                .count();
+
+        data[i][0] = job.getJobId();
+        data[i][1] = job.getModuleCode();
+        data[i][2] = job.getModuleName();
+        data[i][3] = job.getWeeklyHours();
+        data[i][4] = job.getDeadline();
+
+        String applicantText = acceptedCount + " / " + job.getApplicantLimit();
+        String applicantColor = acceptedCount >= job.getApplicantLimit() ? "#F44336" : "#4CAF50";
+        data[i][5] = "<html><font color='" + applicantColor + "'>" + applicantText + "</font></html>";
+
+        String statusText = "OPEN".equals(job.getStatus()) ? "Open" : "Closed";
+        String statusColor = "OPEN".equals(job.getStatus()) ? "#4CAF50" : "#9E9E9E";
+        data[i][6] = "<html><font color='" + statusColor + "'>" + statusText + "</font></html>";
+
+        data[i][7] = job;
+    }
+
+    // 表格模型
+    DefaultTableModel model = new DefaultTableModel(data, columnNames) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return column == 7;
+        }
+
+        @Override
+        public Class<?> getColumnClass(int column) {
+            return column == 7 ? Job.class : Object.class;
+        }
+    };
+
+    JTable table = new JTable(model);
+    table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+    table.setRowHeight(60);
+    table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    table.setShowGrid(false);
+    table.setIntercellSpacing(new Dimension(0, 0));
+
+    // 表头
+    JTableHeader header = table.getTableHeader();
+    header.setFont(new Font("Segoe UI", Font.BOLD, 12));
+    header.setBackground(new Color(240, 240, 240));
+    header.setForeground(new Color(79, 114, 139));
+    header.setPreferredSize(new Dimension(header.getWidth(), 40));
+
+    // 列宽
+    table.getColumnModel().getColumn(0).setPreferredWidth(110);
+    table.getColumnModel().getColumn(1).setPreferredWidth(110);
+    table.getColumnModel().getColumn(2).setPreferredWidth(180);
+    table.getColumnModel().getColumn(3).setPreferredWidth(100);
+    table.getColumnModel().getColumn(4).setPreferredWidth(110);
+    table.getColumnModel().getColumn(5).setPreferredWidth(100);
+    table.getColumnModel().getColumn(6).setPreferredWidth(80);
+    table.getColumnModel().getColumn(7).setPreferredWidth(220);
+
+    // 渲染与编辑
+    table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                     boolean isSelected, boolean hasFocus, int row, int column) {
+            super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            setHorizontalAlignment(SwingConstants.CENTER);
+            setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+            setBackground(row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
+            return this;
+        }
+    });
+
+    table.getColumn("Action").setCellRenderer(new ButtonRenderer());
+    table.getColumn("Action").setCellEditor(new ButtonEditor(new JCheckBox(), this, allApps));
+
+    JScrollPane scrollPane = new JScrollPane(table);
+    scrollPane.setBorder(BorderFactory.createEmptyBorder());
+    scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+    panel.add(scrollPane, BorderLayout.CENTER);
+
+    setContent(panel);
+}
 
     private void refreshApplicantsView(JPanel parentPanel, JComboBox<Object> jobCombo) {
         Object selectedItem = jobCombo.getSelectedItem();
@@ -2092,258 +2041,220 @@ public class DashboardFrame extends JFrame {
     /**
      * Edit an existing posted position
      */
-    private void editPostedPosition(Job job) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+   /**
+ * MO-05 Edit Posted Position
+ * 编辑已发布的职位
+ */
+private void editPostedPosition(Job job) {
+    JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    panel.setBackground(Color.WHITE);
+    panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Title
-        JLabel titleLabel = new JLabel("Edit Position: " + job.getModuleCode() + " - " + job.getModuleName());
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(titleLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+    JLabel titleLabel = new JLabel("Edit Position: " + job.getModuleCode() + " - " + job.getModuleName());
+    titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+    titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+    titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    panel.add(titleLabel);
+    panel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Form fields
-        JPanel formPanel = new JPanel();
-        formPanel.setLayout(new GridBagLayout());
-        formPanel.setBackground(Color.WHITE);
-        formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JPanel formPanel = new JPanel();
+    formPanel.setLayout(new GridBagLayout());
+    formPanel.setBackground(Color.WHITE);
+    formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(8, 8, 8, 8);
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        int row = 0;
+    int row = 0;
 
-        // Job ID (read-only)
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        formPanel.add(new JLabel("Job ID:"), gbc);
+    // Job ID（只读）
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    formPanel.add(new JLabel("Job ID:"), gbc);
+    JLabel jobIdLabel = new JLabel(job.getJobId());
+    jobIdLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    jobIdLabel.setForeground(new Color(100, 100, 100));
+    gbc.gridx = 1;
+    formPanel.add(jobIdLabel, gbc);
+    row++;
 
-        JLabel jobIdLabel = new JLabel(job.getJobId());
-        jobIdLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        jobIdLabel.setForeground(new Color(100, 100, 100));
-        gbc.gridx = 1;
-        formPanel.add(jobIdLabel, gbc);
-        row++;
+    // Module Code（只读）
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    formPanel.add(new JLabel("Module Code:"), gbc);
+    JLabel codeLabel = new JLabel(job.getModuleCode());
+    codeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    codeLabel.setForeground(new Color(100, 100, 100));
+    gbc.gridx = 1;
+    formPanel.add(codeLabel, gbc);
+    row++;
 
-        // Module Code (read-only)
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        formPanel.add(new JLabel("Module Code:"), gbc);
+    // Module Name（只读）
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    formPanel.add(new JLabel("Module Name:"), gbc);
+    JLabel nameLabel = new JLabel(job.getModuleName());
+    nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    nameLabel.setForeground(new Color(100, 100, 100));
+    gbc.gridx = 1;
+    formPanel.add(nameLabel, gbc);
+    row++;
 
-        JLabel moduleCodeLabel = new JLabel(job.getModuleCode());
-        moduleCodeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        moduleCodeLabel.setForeground(new Color(100, 100, 100));
-        gbc.gridx = 1;
-        formPanel.add(moduleCodeLabel, gbc);
-        row++;
+    // Description
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    formPanel.add(new JLabel("Description:"), gbc);
+    JTextArea descArea = new JTextArea(job.getDescription(), 4, 20);
+    descArea.setLineWrap(true);
+    descArea.setWrapStyleWord(true);
+    JScrollPane descScroll = new JScrollPane(descArea);
+    descScroll.setPreferredSize(new Dimension(280, 80));
+    gbc.gridx = 1;
+    formPanel.add(descScroll, gbc);
+    row++;
 
-        // Module Name (read-only)
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        formPanel.add(new JLabel("Module Name:"), gbc);
+    // Weekly Hours
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    formPanel.add(new JLabel("Weekly Hours (1-20):"), gbc);
+    int hours = Math.max(1, Math.min(20, job.getWeeklyHours()));
+    JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(hours, 1, 20, 1));
+    hoursSpinner.setPreferredSize(new Dimension(280, 30));
+    gbc.gridx = 1;
+    formPanel.add(hoursSpinner, gbc);
+    row++;
 
-        JLabel moduleNameLabel = new JLabel(job.getModuleName());
-        moduleNameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        moduleNameLabel.setForeground(new Color(100, 100, 100));
-        gbc.gridx = 1;
-        formPanel.add(moduleNameLabel, gbc);
-        row++;
+    // Applicant Limit
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    formPanel.add(new JLabel("Applicant Limit (1-50):"), gbc);
+    int limit = Math.max(1, Math.min(50, job.getApplicantLimit()));
+    JSpinner limitSpinner = new JSpinner(new SpinnerNumberModel(limit, 1, 50, 1));
+    limitSpinner.setPreferredSize(new Dimension(280, 30));
+    gbc.gridx = 1;
+    formPanel.add(limitSpinner, gbc);
 
-        // Description
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        formPanel.add(new JLabel("Description:"), gbc);
+    JLabel limitHint = new JLabel("  (Number of TAs to hire)");
+    limitHint.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+    limitHint.setForeground(Color.GRAY);
+    gbc.gridx = 2;
+    formPanel.add(limitHint, gbc);
+    row++;
 
-        JTextArea descArea = new JTextArea(job.getDescription(), 3, 20);
-        descArea.setLineWrap(true);
-        descArea.setWrapStyleWord(true);
-        JScrollPane descScroll = new JScrollPane(descArea);
-        descScroll.setPreferredSize(new Dimension(250, 60));
-        gbc.gridx = 1;
-        formPanel.add(descScroll, gbc);
-        row++;
+    // Deadline
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    formPanel.add(new JLabel("Deadline (YYYY-MM-DD):"), gbc);
+    JTextField deadlineField = new JTextField(job.getDeadline(), 20);
+    deadlineField.setPreferredSize(new Dimension(280, 30));
+    gbc.gridx = 1;
+    formPanel.add(deadlineField, gbc);
+    row++;
 
-        // Weekly Hours - 添加安全检查
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        formPanel.add(new JLabel("Weekly Hours (1-20):"), gbc);
+    // Requirements
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    formPanel.add(new JLabel("Requirements:"), gbc);
+    JTextArea reqArea = new JTextArea(job.getRequirements(), 4, 20);
+    reqArea.setLineWrap(true);
+    reqArea.setWrapStyleWord(true);
+    JScrollPane reqScroll = new JScrollPane(reqArea);
+    reqScroll.setPreferredSize(new Dimension(280, 80));
+    gbc.gridx = 1;
+    formPanel.add(reqScroll, gbc);
+    row++;
 
-        int weeklyHours = job.getWeeklyHours();
-        if (weeklyHours < 1) weeklyHours = 5;
-        if (weeklyHours > 20) weeklyHours = 20;
-        JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(weeklyHours, 1, 20, 1));
-        hoursSpinner.setPreferredSize(new Dimension(250, 30));
-        gbc.gridx = 1;
-        formPanel.add(hoursSpinner, gbc);
-        row++;
+    panel.add(formPanel);
+    panel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Applicant Limit - 添加安全检查
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        formPanel.add(new JLabel("Applicant Limit (1-50):"), gbc);
+    // 已录取人数统计
+    List<Application> allApps = FileUtil.loadApplications();
+    int acceptedCount = (int) allApps.stream()
+            .filter(app -> app.getJobId().equals(job.getJobId()) && "ACCEPTED".equals(app.getStatus()))
+            .count();
 
-        int applicantLimit = job.getApplicantLimit();
-        if (applicantLimit < 1) applicantLimit = 5;
-        if (applicantLimit > 50) applicantLimit = 50;
-        JSpinner limitSpinner = new JSpinner(new SpinnerNumberModel(applicantLimit, 1, 50, 1));
-        limitSpinner.setPreferredSize(new Dimension(250, 30));
-        gbc.gridx = 1;
-        formPanel.add(limitSpinner, gbc);
-
-        JLabel limitHint = new JLabel("(Number of TAs to hire)");
-        limitHint.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        limitHint.setForeground(new Color(150, 150, 150));
-        gbc.gridx = 2;
-        formPanel.add(limitHint, gbc);
-        row++;
-
-        // Deadline
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        formPanel.add(new JLabel("Deadline (YYYY-MM-DD):"), gbc);
-
-        JTextField deadlineField = new JTextField(job.getDeadline(), 20);
-        deadlineField.setPreferredSize(new Dimension(250, 30));
-        gbc.gridx = 1;
-        formPanel.add(deadlineField, gbc);
-        row++;
-
-        // Requirements
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        formPanel.add(new JLabel("Requirements:"), gbc);
-
-        JTextArea reqArea = new JTextArea(job.getRequirements(), 3, 20);
-        reqArea.setLineWrap(true);
-        reqArea.setWrapStyleWord(true);
-        JScrollPane reqScroll = new JScrollPane(reqArea);
-        reqScroll.setPreferredSize(new Dimension(250, 60));
-        gbc.gridx = 1;
-        formPanel.add(reqScroll, gbc);
-        row++;
-
-        panel.add(formPanel);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-        // Warning for jobs with applicants - 计算 acceptedCount
-        List<Application> allApps = FileUtil.loadApplications();
-        boolean hasApplicants = false;
-        int acceptedCount = 0;
-        for (Application app : allApps) {
-            if (app.getJobId().equals(job.getJobId())) {
-                hasApplicants = true;
-                if ("ACCEPTED".equals(app.getStatus())) {
-                    acceptedCount++;
-                }
-            }
-        }
-
-        // 创建 final 变量用于 lambda 表达式
-        final int finalAcceptedCount = acceptedCount;
-        final Job finalJob = job;
-
-        if (hasApplicants) {
-            JPanel warningPanel = new JPanel();
-            warningPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-            warningPanel.setBackground(new Color(255, 243, 224));
-            warningPanel.setBorder(BorderFactory.createLineBorder(new Color(255, 152, 0)));
-            warningPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            warningPanel.setMaximumSize(new Dimension(500, 50));
-
-            JLabel warningLabel = new JLabel("Warning: This position already has applicants. Modifying it may affect existing applications.");
-            warningLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-            warningLabel.setForeground(new Color(255, 152, 0));
-            warningPanel.add(warningLabel);
-
-            panel.add(warningPanel);
-            panel.add(Box.createRigidArea(new Dimension(0, 20)));
-        }
-
-        // Buttons
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        buttonPanel.setBackground(Color.WHITE);
-        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton saveBtn = UIHelper.createButton("Save Changes", UIHelper.SUCCESS_COLOR);
-        JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
-
-        saveBtn.addActionListener(e -> {
-            String description = descArea.getText().trim();
-            int hours = (int) hoursSpinner.getValue();
-            int limit = (int) limitSpinner.getValue();
-            String deadline = deadlineField.getText().trim();
-            String requirements = reqArea.getText().trim();
-
-            if (description.isEmpty() || deadline.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in all required fields", "Warning", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // Validate deadline format
-            if (!deadline.matches("\\d{4}-\\d{2}-\\d{2}")) {
-                JOptionPane.showMessageDialog(this, "Deadline must be in format YYYY-MM-DD", "Warning", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // Check if reducing limit below current accepted count
-            if (limit < finalAcceptedCount) {
-                int confirm = JOptionPane.showConfirmDialog(this,
-                        "Warning: You are reducing the applicant limit to " + limit +
-                                ", but there are already " + finalAcceptedCount + " accepted applicants.\n\n" +
-                                "This may cause issues. Are you sure you want to continue?",
-                        "Limit Reduction Warning",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE);
-                if (confirm != JOptionPane.YES_OPTION) {
-                    return;
-                }
-            }
-
-            // Update job
-            List<Job> jobs = FileUtil.loadJobs();
-            for (int i = 0; i < jobs.size(); i++) {
-                Job j = jobs.get(i);
-                if (j.getJobId().equals(finalJob.getJobId())) {
-                    Job updatedJob = new Job(
-                            j.getJobId(),
-                            j.getMoEmail(),
-                            j.getModuleCode(),
-                            j.getModuleName(),
-                            description,
-                            hours,
-                            deadline,
-                            requirements,
-                            j.getStatus(),
-                            limit
-                    );
-                    jobs.set(i, updatedJob);
-                    break;
-                }
-            }
-            FileUtil.saveJobs(jobs);
-
-            LoggerUtil.logUpdate("Job", finalJob.getJobId() + " was updated (Hours: " + hours + ", Limit: " + limit + ")");
-            JOptionPane.showMessageDialog(this, "Position updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-
-            // Refresh view
-            viewMyJobs();
-        });
-
-        cancelBtn.addActionListener(e -> viewMyJobs());
-
-        buttonPanel.add(saveBtn);
-        buttonPanel.add(cancelBtn);
-        panel.add(buttonPanel);
-
-        setContent(panel);
+    // 警告提示
+    if (acceptedCount > 0) {
+        JPanel warnPanel = new JPanel();
+        warnPanel.setBackground(new Color(255, 248, 225));
+        warnPanel.setBorder(BorderFactory.createLineBorder(Color.ORANGE));
+        JLabel warnLabel = new JLabel("Warning: This position has " + acceptedCount + " accepted applicants.");
+        warnLabel.setForeground(new Color(255, 120, 0));
+        warnPanel.add(warnLabel);
+        panel.add(warnPanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
     }
+
+    // 按钮
+    JPanel buttonPanel = new JPanel();
+    buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+    buttonPanel.setBackground(Color.WHITE);
+
+    JButton saveBtn = UIHelper.createButton("Save Changes", UIHelper.SUCCESS_COLOR);
+    JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
+
+    saveBtn.addActionListener(e -> {
+        String desc = descArea.getText().trim();
+        int wh = (int) hoursSpinner.getValue();
+        int al = (int) limitSpinner.getValue();
+        String dl = deadlineField.getText().trim();
+        String req = reqArea.getText().trim();
+
+        if (desc.isEmpty() || dl.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Description and deadline cannot be empty!", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!dl.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            JOptionPane.showMessageDialog(this, "Deadline must be YYYY-MM-DD", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // 限制数不能低于已录取数
+        if (al < acceptedCount) {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "Warning: New limit (" + al + ") is less than accepted applicants (" + acceptedCount + ").\nContinue?",
+                    "Limit Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION) return;
+        }
+
+        // 更新职位
+        List<Job> jobs = FileUtil.loadJobs();
+        for (int i = 0; i < jobs.size(); i++) {
+            if (jobs.get(i).getJobId().equals(job.getJobId())) {
+                Job updated = new Job(
+                        job.getJobId(),
+                        job.getMoEmail(),
+                        job.getModuleCode(),
+                        job.getModuleName(),
+                        desc,
+                        wh,
+                        dl,
+                        req,
+                        job.getStatus(),
+                        al
+                );
+                jobs.set(i, updated);
+                break;
+            }
+        }
+        FileUtil.saveJobs(jobs);
+        LoggerUtil.logUpdate("Job", job.getJobId());
+
+        JOptionPane.showMessageDialog(this, "Position updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        viewMyJobs();
+    });
+
+    cancelBtn.addActionListener(e -> viewMyJobs());
+
+    buttonPanel.add(saveBtn);
+    buttonPanel.add(cancelBtn);
+    panel.add(buttonPanel);
+
+    setContent(panel);
+}
 
     // ========== Admin Functions ==========
 
