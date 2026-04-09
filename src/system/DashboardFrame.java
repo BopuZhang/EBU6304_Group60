@@ -12,6 +12,12 @@ import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import javax.swing.JFileChooser;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableCellEditor;
+import javax.swing.AbstractCellEditor;
+import javax.swing.table.JTableHeader;
 
 public class DashboardFrame extends JFrame {
     private User currentUser;
@@ -193,6 +199,9 @@ public class DashboardFrame extends JFrame {
     /**
      * Submit application for a job
      */
+    /**
+     * Submit application for a job
+     */
     private void submitApplication(String jobId) {
         // Check if already applied
         if (hasApplied(jobId)) {
@@ -224,18 +233,34 @@ public class DashboardFrame extends JFrame {
         // Check current accepted count
         List<Application> allApps = FileUtil.loadApplications();
         int acceptedCount = 0;
+        int pendingCount = 0;
         for (Application app : allApps) {
-            if (app.getJobId().equals(jobId) && "ACCEPTED".equals(app.getStatus())) {
-                acceptedCount++;
+            if (app.getJobId().equals(jobId)) {
+                if ("ACCEPTED".equals(app.getStatus())) {
+                    acceptedCount++;
+                } else if ("PENDING".equals(app.getStatus())) {
+                    pendingCount++;
+                }
             }
         }
 
-        // Check if position is already full
+        // Check if position is already full (based on accepted applications)
         if (acceptedCount >= targetJob.getApplicantLimit()) {
             JOptionPane.showMessageDialog(this,
                     "This position has reached its applicant limit (" + targetJob.getApplicantLimit() + ").\n" +
                             "No more applications are being accepted.",
                     "Position Full", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // 可选：也可以检查待审核申请数量，防止过多申请堆积
+        // 这里可以根据业务需求决定是否限制 PENDING 状态的数量
+        int totalApplications = acceptedCount + pendingCount;
+        if (totalApplications >= targetJob.getApplicantLimit() * 3) {  // 例如限制总申请数不超过上限的3倍
+            JOptionPane.showMessageDialog(this,
+                    "This position has received too many applications.\n" +
+                            "Please try another position.",
+                    "Too Many Applications", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -250,31 +275,13 @@ public class DashboardFrame extends JFrame {
         apps.add(newApp);
         FileUtil.saveApplications(apps);
 
-        // Check if after this application, the position becomes full
-        int newAcceptedCount = acceptedCount + 1;
-        if (newAcceptedCount >= targetJob.getApplicantLimit()) {
-            // Close the position automatically
-            List<Job> updatedJobs = FileUtil.loadJobs();
-            for (Job job : updatedJobs) {
-                if (job.getJobId().equals(jobId)) {
-                    job.setStatus("CLOSED");
-                    LoggerUtil.logInfo("Job " + jobId + " automatically closed after reaching applicant limit (" + newAcceptedCount + "/" + targetJob.getApplicantLimit() + ")");
-                    break;
-                }
-            }
-            FileUtil.saveJobs(updatedJobs);
-            JOptionPane.showMessageDialog(this,
-                    "Application submitted successfully!\n\n" +
-                            "Note: This position has now reached its applicant limit and has been closed.",
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            JOptionPane.showMessageDialog(this,
-                    "Application submitted successfully!\n" +
-                            "Applicants: " + newAcceptedCount + " / " + targetJob.getApplicantLimit(),
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
-        }
-
         LoggerUtil.logInfo("TA " + currentUser.getEmail() + " applied for job: " + jobId);
+
+        JOptionPane.showMessageDialog(this,
+                "Application submitted successfully!\n\n" +
+                        "Your application is now pending review by the Module Organizer.\n" +
+                        "Current accepted applicants: " + acceptedCount + " / " + targetJob.getApplicantLimit(),
+                "Success", JOptionPane.INFORMATION_MESSAGE);
 
         // Refresh the job list
         viewJobs();
@@ -833,6 +840,9 @@ public class DashboardFrame extends JFrame {
     /**
      * View Available Positions - 带申请按钮的职位列表
      */
+    /**
+     * View Available Positions - 使用 JTable 重构
+     */
     private void viewJobs() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
@@ -845,9 +855,10 @@ public class DashboardFrame extends JFrame {
         panel.add(titleLabel, BorderLayout.NORTH);
 
         List<Job> allJobs = FileUtil.loadJobs();
-        List<Job> availableJobs = new ArrayList<>();
         List<Application> allApps = FileUtil.loadApplications();
 
+        // 过滤出开放状态的职位
+        List<Job> availableJobs = new ArrayList<>();
         for (Job job : allJobs) {
             if ("OPEN".equals(job.getStatus())) {
                 availableJobs.add(job);
@@ -857,115 +868,177 @@ public class DashboardFrame extends JFrame {
         if (availableJobs.isEmpty()) {
             JLabel emptyLabel = new JLabel("No available positions at this time.", SwingConstants.CENTER);
             emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(UIHelper.getSecondaryTextColor());
             panel.add(emptyLabel, BorderLayout.CENTER);
             setContent(panel);
             return;
         }
 
+        // 按截止日期排序
         availableJobs.sort((j1, j2) -> j1.getDeadline().compareTo(j2.getDeadline()));
 
-        // 创建一个包含表头和表格内容的容器
-        JPanel tableContainer = new JPanel();
-        tableContainer.setLayout(new BoxLayout(tableContainer, BoxLayout.Y_AXIS));
-        tableContainer.setBackground(Color.WHITE);
+        // 准备表格数据
+        String[] columnNames = {"Module Code", "Module Name", "Weekly Hours", "Deadline", "Applicants", "Status", "Action"};
+        Object[][] data = new Object[availableJobs.size()][7];
 
-        // Header - 设置固定高度
-        JPanel headerPanel = new JPanel(new GridLayout(1, 7, 5, 0));
-        headerPanel.setBackground(new Color(240, 240, 240));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
-        headerPanel.setPreferredSize(new Dimension(0, 45));
-        headerPanel.add(createHeaderLabel("Module Code"));
-        headerPanel.add(createHeaderLabel("Module Name"));
-        headerPanel.add(createHeaderLabel("Weekly Hours"));
-        headerPanel.add(createHeaderLabel("Deadline"));
-        headerPanel.add(createHeaderLabel("Applicants"));
-        headerPanel.add(createHeaderLabel("Status"));
-        headerPanel.add(createHeaderLabel("Action"));
-        tableContainer.add(headerPanel);
+        for (int i = 0; i < availableJobs.size(); i++) {
+            Job job = availableJobs.get(i);
 
-        for (Job job : availableJobs) {
-            int currentApplicants = (int) allApps.stream()
+            // 计算已接受的申请数量
+            int acceptedCount = (int) allApps.stream()
                     .filter(app -> app.getJobId().equals(job.getJobId()) && "ACCEPTED".equals(app.getStatus()))
                     .count();
 
-            boolean applied = hasApplied(job.getJobId());
-            boolean reachedLimit = currentApplicants >= job.getApplicantLimit();
+            // 计算待审核的申请数量
+            int pendingCount = (int) allApps.stream()
+                    .filter(app -> app.getJobId().equals(job.getJobId()) && "PENDING".equals(app.getStatus()))
+                    .count();
 
-            JPanel rowPanel = new JPanel(new GridLayout(1, 7, 5, 0));
-            rowPanel.setBackground(Color.WHITE);
-            rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
-            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-            rowPanel.setPreferredSize(new Dimension(0, 50));
+            // 检查当前用户是否已申请，以及申请状态
+            boolean hasApplied = false;
+            String userAppStatus = null;
+            for (Application app : allApps) {
+                if (app.getJobId().equals(job.getJobId()) && app.getTaEmail().equals(currentUser.getEmail())) {
+                    hasApplied = true;
+                    userAppStatus = app.getStatus();
+                    break;
+                }
+            }
 
-            rowPanel.add(createCellLabel(job.getModuleCode()));
-            rowPanel.add(createCellLabel(job.getModuleName()));
-            rowPanel.add(createCellLabel(String.valueOf(job.getWeeklyHours())));
-            rowPanel.add(createCellLabel(job.getDeadline()));
+            boolean reachedLimit = acceptedCount >= job.getApplicantLimit();
 
-            JLabel applicantsLabel = createCellLabel(currentApplicants + " / " + job.getApplicantLimit());
-            applicantsLabel.setForeground(reachedLimit ? new Color(244, 67, 54) : new Color(76, 175, 80));
-            rowPanel.add(applicantsLabel);
+            data[i][0] = job.getModuleCode();
+            data[i][1] = job.getModuleName();
+            data[i][2] = job.getWeeklyHours();
+            data[i][3] = job.getDeadline();
 
-            JLabel statusLabel;
+            // 申请人数量（带颜色标识）
+            String applicantsText = acceptedCount + " / " + job.getApplicantLimit();
+            if (pendingCount > 0) {
+                applicantsText += " (" + pendingCount + " pending)";
+            }
+            String applicantsColor = reachedLimit ? "#F44336" : "#4CAF50";
+            data[i][4] = "<html><font color='" + applicantsColor + "'>" + applicantsText + "</font></html>";
+
+            // 状态显示 - 区分 PENDING 和 ACCEPTED
+            String statusText;
+            String statusColor;
             if (reachedLimit) {
-                statusLabel = createCellLabel("Full");
-                statusLabel.setForeground(new Color(244, 67, 54));
-            } else if (applied) {
-                statusLabel = createCellLabel("Applied");
-                statusLabel.setForeground(new Color(76, 175, 80));
+                statusText = "Full";
+                statusColor = "#F44336";
+            } else if (hasApplied) {
+                if ("ACCEPTED".equals(userAppStatus)) {
+                    statusText = "Accepted";
+                    statusColor = "#4CAF50";
+                } else {
+                    statusText = "Pending";
+                    statusColor = "#FF9800";  // 橙色
+                }
             } else {
-                statusLabel = createCellLabel("Available");
-                statusLabel.setForeground(new Color(79, 114, 139));
+                statusText = "Available";
+                statusColor = "#4F728B";
             }
-            rowPanel.add(statusLabel);
+            data[i][5] = "<html><font color='" + statusColor + "'>" + statusText + "</font></html>";
 
-            JButton applyBtn = new JButton("Apply");
-            applyBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            applyBtn.setBackground(new Color(76, 175, 80));
-            applyBtn.setForeground(Color.WHITE);
-            applyBtn.setFocusPainted(false);
-            applyBtn.setBorderPainted(false);
-            applyBtn.setOpaque(true);
-            applyBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-            if (applied || reachedLimit) {
-                applyBtn.setEnabled(false);
-                applyBtn.setText(applied ? "Applied" : "Full");
-                applyBtn.setBackground(new Color(150, 150, 150));
-            } else {
-                final Job finalJob = job;
-                final int finalCurrentApplicants = currentApplicants;
-                applyBtn.addActionListener(e -> {
-                    int confirm = JOptionPane.showConfirmDialog(this,
-                            "Apply for " + finalJob.getModuleCode() + " - " + finalJob.getModuleName() + "?\n" +
-                                    "Current applicants: " + finalCurrentApplicants + " / " + finalJob.getApplicantLimit(),
-                            "Confirm Application",
-                            JOptionPane.YES_NO_OPTION);
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        submitApplication(finalJob.getJobId());
-                    }
-                });
-            }
-
-            // 将按钮放在一个面板中以保持居中
-            JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-            btnPanel.setBackground(Color.WHITE);
-            btnPanel.add(applyBtn);
-            rowPanel.add(btnPanel);
-
-            tableContainer.add(rowPanel);
+            // 保存 Job 对象和用户申请状态用于按钮操作
+            data[i][6] = new Object[]{job, userAppStatus};
         }
 
-        // 关键：将 tableContainer 放入 JScrollPane
-        JScrollPane scrollPane = new JScrollPane(tableContainer);
+        // 创建表格模型
+        DefaultTableModel model = new DefaultTableModel(data, columnNames) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 6; // 只有 Action 列可编辑
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 6) {
+                    return Object[].class;
+                }
+                return String.class;
+            }
+        };
+
+        JTable table = new JTable(model);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        table.setRowHeight(45);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setBorder(BorderFactory.createEmptyBorder());
+
+        // 启用排序功能
+        table.setAutoCreateRowSorter(true);
+
+        // 关闭自动调整列宽，支持水平滚动
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+        // 设置表头样式
+        JTableHeader header = table.getTableHeader();
+        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        header.setBackground(UIHelper.getHeaderBackgroundColor());
+        header.setForeground(UIHelper.getAccentColor());  // 确保返回 Color
+
+        // 设置表头居中
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
+        headerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+        }
+
+        // 设置列宽
+        table.getColumnModel().getColumn(0).setPreferredWidth(100);
+        table.getColumnModel().getColumn(0).setMinWidth(90);
+
+        table.getColumnModel().getColumn(1).setPreferredWidth(180);
+        table.getColumnModel().getColumn(1).setMinWidth(150);
+
+        table.getColumnModel().getColumn(2).setPreferredWidth(100);
+        table.getColumnModel().getColumn(2).setMinWidth(90);
+
+        table.getColumnModel().getColumn(3).setPreferredWidth(110);
+        table.getColumnModel().getColumn(3).setMinWidth(100);
+
+        table.getColumnModel().getColumn(4).setPreferredWidth(130);
+        table.getColumnModel().getColumn(4).setMinWidth(110);
+
+        table.getColumnModel().getColumn(5).setPreferredWidth(100);
+        table.getColumnModel().getColumn(5).setMinWidth(90);
+
+        table.getColumnModel().getColumn(6).setPreferredWidth(120);
+        table.getColumnModel().getColumn(6).setMinWidth(100);
+
+        // 设置单元格渲染器（居中显示）
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                setHorizontalAlignment(SwingConstants.CENTER);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : UIHelper.getTableAlternateColor());
+                }
+                return c;
+            }
+        };
+
+        for (int i = 0; i < 6; i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+
+        // 为 Action 列设置按钮渲染器和编辑器
+        table.getColumnModel().getColumn(6).setCellRenderer(new ApplyButtonRenderer());
+        table.getColumnModel().getColumn(6).setCellEditor(new ApplyButtonEditor(this, allApps));
+
+        // 添加滚动面板
+        JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(Color.WHITE);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        // 设置滚动速度
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(20);
 
         panel.add(scrollPane, BorderLayout.CENTER);
         setContent(panel);
@@ -1009,7 +1082,7 @@ public class DashboardFrame extends JFrame {
         if (myApps.isEmpty()) {
             JLabel emptyLabel = new JLabel("You haven't applied for any positions yet. Go to 'View Available Positions' to apply.", SwingConstants.CENTER);
             emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(UIHelper.getSecondaryTextColor());
             panel.add(emptyLabel, BorderLayout.CENTER);
             setContent(panel);
             return;
@@ -1028,7 +1101,7 @@ public class DashboardFrame extends JFrame {
 
         // Header - 固定高度
         JPanel headerPanel = new JPanel(new GridLayout(1, 5, 5, 0));
-        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBackground(UIHelper.getHeaderBackgroundColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
         headerPanel.setPreferredSize(new Dimension(0, 45));
@@ -1069,24 +1142,24 @@ public class DashboardFrame extends JFrame {
 
             // Status with color
             String statusText;
-            Color statusColor;
+            String statusColor;
             switch (app.getStatus().toUpperCase()) {
                 case "ACCEPTED":
                     statusText = "Accepted";
-                    statusColor = new Color(76, 175, 80);
+                    statusColor = "#4CAF50";  // 或使用 UIHelper.SUCCESS_COLOR
                     break;
                 case "REJECTED":
                     statusText = "Rejected";
-                    statusColor = new Color(244, 67, 54);
+                    statusColor = "#F44336";  // 或使用 UIHelper.DANGER_COLOR
                     break;
                 default:
                     statusText = "Pending";
-                    statusColor = new Color(255, 152, 0);
+                    statusColor = "#FF9800";  // 或使用 UIHelper.WARNING_COLOR
                     break;
             }
 
             JLabel statusLabel = createCellLabel(statusText);
-            statusLabel.setForeground(statusColor);
+            statusLabel.setForeground(Color.decode(statusColor));
             rowPanel.add(statusLabel);
 
             tableContainer.add(rowPanel);
@@ -1103,6 +1176,9 @@ public class DashboardFrame extends JFrame {
         setContent(panel);
     }
 //========== MO Functions ==========
+    /**
+     * View applicants for MO's positions (with "All Positions" option)
+     */
     /**
      * View applicants for MO's positions (with "All Positions" option)
      */
@@ -1125,7 +1201,7 @@ public class DashboardFrame extends JFrame {
 
             JLabel emptyLabel = new JLabel("You haven't posted any positions yet. Go to 'Post Position' to create one.", SwingConstants.CENTER);
             emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(UIHelper.getSecondaryTextColor());
             panel.add(emptyLabel, BorderLayout.CENTER);
             setContent(panel);
             return;
@@ -1166,18 +1242,11 @@ public class DashboardFrame extends JFrame {
         topPanel.add(jobCombo);
 
         JButton refreshBtn = UIHelper.createButton("Refresh", UIHelper.PRIMARY_COLOR);
-
-        final JPanel finalPanel = panel;
-        final JComboBox<Object> finalJobCombo = jobCombo;
-
-        refreshBtn.addActionListener(e -> {
-            refreshApplicantsView(finalPanel, finalJobCombo);
-        });
         topPanel.add(refreshBtn);
 
         panel.add(topPanel, BorderLayout.NORTH);
 
-        // Content panel for applicants
+        // Content panel for applicants - 使用 JTable
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BorderLayout());
         contentPanel.setBackground(Color.WHITE);
@@ -1185,8 +1254,18 @@ public class DashboardFrame extends JFrame {
 
         setContent(panel);
 
+        // 添加监听器
+        final JPanel finalContentPanel = contentPanel;
+        final JComboBox<Object> finalJobCombo = jobCombo;
+
+        // 当下拉框选择改变时刷新
+        jobCombo.addActionListener(e -> refreshApplicantsView(finalContentPanel, finalJobCombo));
+
+        // 刷新按钮
+        refreshBtn.addActionListener(e -> refreshApplicantsView(finalContentPanel, finalJobCombo));
+
         // Load initial applicants
-        refreshApplicantsView(panel, jobCombo);
+        refreshApplicantsView(contentPanel, jobCombo);
     }
    /**
  * MO-01 Post Position
@@ -1560,7 +1639,9 @@ private void viewMyJobs() {
     setContent(panel);
 }
 
-    private void refreshApplicantsView(JPanel parentPanel, JComboBox<Object> jobCombo) {
+    private void refreshApplicantsView(JPanel contentPanel, JComboBox<Object> jobCombo) {
+        contentPanel.removeAll();
+
         Object selectedItem = jobCombo.getSelectedItem();
 
         // Get all applications
@@ -1596,46 +1677,75 @@ private void viewMyJobs() {
                 }
             }
         } else {
+            contentPanel.revalidate();
+            contentPanel.repaint();
             return;
         }
 
-        // Get profiles for TAs
+        // Get profiles and users for TAs
         List<Profile> allProfiles = FileUtil.loadProfiles();
         List<User> allUsers = FileUtil.loadUsers();
 
-        // Create content panel
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new BorderLayout());
-        contentPanel.setBackground(Color.WHITE);
+        // Build maps for quick lookup
+        Map<String, Profile> profileMap = new HashMap<>();
+        for (Profile p : allProfiles) {
+            profileMap.put(p.getEmail().toLowerCase(), p);
+        }
 
-        // Job info panel
+        Map<String, User> userMap = new HashMap<>();
+        for (User u : allUsers) {
+            userMap.put(u.getEmail().toLowerCase(), u);
+        }
+
+        Map<String, Job> jobMap = new HashMap<>();
+        for (Job j : allJobs) {
+            jobMap.put(j.getJobId(), j);
+        }
+
+        // Job info panel (summary)
         JPanel jobInfoPanel = new JPanel();
         jobInfoPanel.setLayout(new BoxLayout(jobInfoPanel, BoxLayout.Y_AXIS));
         jobInfoPanel.setBackground(new Color(240, 240, 240));
         jobInfoPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
 
-        if (selectedItem instanceof String && selectedItem.equals("All Positions")) {
+        boolean isAllPositions = selectedItem instanceof String && selectedItem.equals("All Positions");
+
+        if (isAllPositions) {
             int totalApplicants = 0;
             int totalAccepted = 0;
+            int totalPending = 0;
             for (Job job : myJobs) {
                 for (Application app : allApps) {
                     if (app.getJobId().equals(job.getJobId())) {
                         totalApplicants++;
                         if ("ACCEPTED".equals(app.getStatus())) {
                             totalAccepted++;
+                        } else if ("PENDING".equals(app.getStatus())) {
+                            totalPending++;
                         }
                     }
                 }
             }
             jobInfoPanel.add(new JLabel("All Positions - Summary"));
             jobInfoPanel.add(new JLabel("Total Positions: " + myJobs.size()));
-            jobInfoPanel.add(new JLabel("Total Applicants: " + totalApplicants));
-            jobInfoPanel.add(new JLabel("Total Accepted: " + totalAccepted));
+            jobInfoPanel.add(new JLabel("Total Applicants: " + totalApplicants +
+                    " (Accepted: " + totalAccepted + ", Pending: " + totalPending + ")"));
         } else if (selectedJob != null) {
+            // Count applicants for this job
+            int acceptedCount = 0;
+            int pendingCount = 0;
+            for (Application app : jobApps) {
+                if ("ACCEPTED".equals(app.getStatus())) {
+                    acceptedCount++;
+                } else if ("PENDING".equals(app.getStatus())) {
+                    pendingCount++;
+                }
+            }
             jobInfoPanel.add(new JLabel("Position: " + selectedJob.getModuleCode() + " - " + selectedJob.getModuleName()));
             jobInfoPanel.add(new JLabel("Deadline: " + selectedJob.getDeadline()));
             jobInfoPanel.add(new JLabel("Weekly Hours: " + selectedJob.getWeeklyHours()));
-            jobInfoPanel.add(new JLabel("Applicants: " + jobApps.size()));
+            jobInfoPanel.add(new JLabel("Applicants: " + jobApps.size() +
+                    " (Accepted: " + acceptedCount + ", Pending: " + pendingCount + ")"));
             jobInfoPanel.add(new JLabel("Applicant Limit: " + selectedJob.getApplicantLimit()));
         }
 
@@ -1644,371 +1754,206 @@ private void viewMyJobs() {
         if (jobApps.isEmpty()) {
             JLabel emptyLabel = new JLabel("No applicants for this selection.", SwingConstants.CENTER);
             emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(UIHelper.getSecondaryTextColor());
             contentPanel.add(emptyLabel, BorderLayout.CENTER);
+            contentPanel.revalidate();
+            contentPanel.repaint();
+            return;
+        }
+
+        // 按申请时间排序（最新的在前）
+        jobApps.sort((a1, a2) -> a2.getApplyTime().compareTo(a1.getApplyTime()));
+
+        // 确定列数和列名
+        String[] columnNames;
+        if (isAllPositions) {
+            columnNames = new String[]{"Apply Date", "Name", "Student ID", "Major", "Position", "Status", "Action", "Profile"};
         } else {
-            // 创建一个外层面板，用于放置表格和滚动条
-            JPanel tableWrapper = new JPanel();
-            tableWrapper.setLayout(new BorderLayout());
-            tableWrapper.setBackground(Color.WHITE);
+            columnNames = new String[]{"Apply Date", "Name", "Student ID", "Major", "Status", "Action", "Profile"};
+        }
 
-            // 确定列数
-            int columnCount = (selectedItem instanceof String && selectedItem.equals("All Positions")) ? 8 : 7;
-            boolean isAllPositions = (selectedItem instanceof String && selectedItem.equals("All Positions"));
+        // 准备表格数据
+        Object[][] data = new Object[jobApps.size()][columnNames.length];
 
-            // 计算总宽度 - 设置每列的最小宽度
-            int[] columnWidths;
-            if (isAllPositions) {
-                columnWidths = new int[]{150, 120, 100, 100, 180, 80, 110, 100};
-            } else {
-                columnWidths = new int[]{150, 120, 100, 100, 80, 110, 100};
-            }
-
-            // 创建表格容器 - 使用 BoxLayout
-            JPanel tableContainer = new JPanel();
-            tableContainer.setLayout(new BoxLayout(tableContainer, BoxLayout.Y_AXIS));
-            tableContainer.setBackground(Color.WHITE);
-
-            // 设置表格容器的首选大小，使其足够宽以显示所有列
-            int totalWidth = 0;
-            for (int width : columnWidths) {
-                totalWidth += width;
-            }
-            totalWidth += (columnCount - 1) * 5; // 加上间距
-            tableContainer.setPreferredSize(new Dimension(totalWidth, 0));
-
-            // Header - 使用 GridBagLayout 以更好地控制列宽
-            JPanel headerPanel = new JPanel(new GridBagLayout());
-            headerPanel.setBackground(new Color(240, 240, 240));
-            headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-            headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
-            headerPanel.setPreferredSize(new Dimension(totalWidth, 45));
-
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.insets = new Insets(0, 2, 0, 2);
-            gbc.gridy = 0;
+        for (int i = 0; i < jobApps.size(); i++) {
+            Application app = jobApps.get(i);
+            Job appJob = jobMap.get(app.getJobId());
+            Profile taProfile = profileMap.get(app.getTaEmail().toLowerCase());
+            User taUser = userMap.get(app.getTaEmail().toLowerCase());
 
             int col = 0;
-
-            // Apply Date
-            gbc.gridx = col;
-            gbc.weightx = 1.0;
-            JLabel dateHeader = createHeaderLabel("Apply Date");
-            dateHeader.setPreferredSize(new Dimension(columnWidths[col], 30));
-            headerPanel.add(dateHeader, gbc);
-            col++;
-
-            // Name
-            gbc.gridx = col;
-            gbc.weightx = 1.0;
-            JLabel nameHeader = createHeaderLabel("Name");
-            nameHeader.setPreferredSize(new Dimension(columnWidths[col], 30));
-            headerPanel.add(nameHeader, gbc);
-            col++;
-
-            // Student ID
-            gbc.gridx = col;
-            gbc.weightx = 1.0;
-            JLabel idHeader = createHeaderLabel("Student ID");
-            idHeader.setPreferredSize(new Dimension(columnWidths[col], 30));
-            headerPanel.add(idHeader, gbc);
-            col++;
-
-            // Major
-            gbc.gridx = col;
-            gbc.weightx = 1.0;
-            JLabel majorHeader = createHeaderLabel("Major");
-            majorHeader.setPreferredSize(new Dimension(columnWidths[col], 30));
-            headerPanel.add(majorHeader, gbc);
-            col++;
+            data[i][col++] = app.getApplyTime();  // Apply Date
+            data[i][col++] = taUser != null ? taUser.getName() : app.getTaEmail();  // Name
+            data[i][col++] = taProfile != null ? taProfile.getStudentId() : "Not set";  // Student ID
+            data[i][col++] = taProfile != null ? taProfile.getMajor() : "Not set";  // Major
 
             if (isAllPositions) {
-                // Position
-                gbc.gridx = col;
-                gbc.weightx = 1.0;
-                JLabel positionHeader = createHeaderLabel("Position");
-                positionHeader.setPreferredSize(new Dimension(columnWidths[col], 30));
-                headerPanel.add(positionHeader, gbc);
-                col++;
+                data[i][col++] = appJob != null ? (appJob.getModuleCode() + " - " + appJob.getModuleName()) : "N/A";  // Position
             }
 
             // Status
-            gbc.gridx = col;
-            gbc.weightx = 1.0;
-            JLabel statusHeader = createHeaderLabel("Status");
-            statusHeader.setPreferredSize(new Dimension(columnWidths[col], 30));
-            headerPanel.add(statusHeader, gbc);
-            col++;
-
-            // Action
-            gbc.gridx = col;
-            gbc.weightx = 1.0;
-            JLabel actionHeader = createHeaderLabel("Action");
-            actionHeader.setPreferredSize(new Dimension(columnWidths[col], 30));
-            headerPanel.add(actionHeader, gbc);
-            col++;
-
-            // Profile
-            gbc.gridx = col;
-            gbc.weightx = 1.0;
-            JLabel profileHeader = createHeaderLabel("Profile");
-            profileHeader.setPreferredSize(new Dimension(columnWidths[col], 30));
-            headerPanel.add(profileHeader, gbc);
-
-            tableContainer.add(headerPanel);
-
-            final JPanel finalParentPanel = parentPanel;
-            final JComboBox<Object> finalJobCombo = jobCombo;
-
-            for (Application app : jobApps) {
-                // Find the job for this application
-                Job appJob = null;
-                for (Job job : allJobs) {
-                    if (job.getJobId().equals(app.getJobId())) {
-                        appJob = job;
-                        break;
-                    }
-                }
-
-                // Find TA profile
-                Profile taProfile = null;
-                for (Profile p : allProfiles) {
-                    if (p.getEmail().equalsIgnoreCase(app.getTaEmail())) {
-                        taProfile = p;
-                        break;
-                    }
-                }
-
-                User taUser = null;
-                for (User u : allUsers) {
-                    if (u.getEmail().equalsIgnoreCase(app.getTaEmail())) {
-                        taUser = u;
-                        break;
-                    }
-                }
-
-                // 创建行面板 - 使用 GridBagLayout
-                JPanel rowPanel = new JPanel(new GridBagLayout());
-                rowPanel.setBackground(Color.WHITE);
-                rowPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
-                rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-                rowPanel.setPreferredSize(new Dimension(totalWidth, 60));
-
-                GridBagConstraints rowGbc = new GridBagConstraints();
-                rowGbc.fill = GridBagConstraints.HORIZONTAL;
-                rowGbc.insets = new Insets(0, 2, 0, 2);
-                rowGbc.gridy = 0;
-
-                col = 0;
-
-                // Apply Date
-                rowGbc.gridx = col;
-                rowGbc.weightx = 1.0;
-                JLabel dateLabel = createCellLabel(app.getApplyTime());
-                dateLabel.setPreferredSize(new Dimension(columnWidths[col], 45));
-                rowPanel.add(dateLabel, rowGbc);
-                col++;
-
-                // Name
-                rowGbc.gridx = col;
-                rowGbc.weightx = 1.0;
-                String taName = taUser != null ? taUser.getName() : app.getTaEmail();
-                JLabel nameLabel = createCellLabel(taName);
-                nameLabel.setPreferredSize(new Dimension(columnWidths[col], 45));
-                rowPanel.add(nameLabel, rowGbc);
-                col++;
-
-                // Student ID
-                rowGbc.gridx = col;
-                rowGbc.weightx = 1.0;
-                String studentId = taProfile != null ? taProfile.getStudentId() : "Not set";
-                JLabel idLabel = createCellLabel(studentId);
-                idLabel.setPreferredSize(new Dimension(columnWidths[col], 45));
-                rowPanel.add(idLabel, rowGbc);
-                col++;
-
-                // Major
-                rowGbc.gridx = col;
-                rowGbc.weightx = 1.0;
-                String major = taProfile != null ? taProfile.getMajor() : "Not set";
-                JLabel majorLabel = createCellLabel(major);
-                majorLabel.setPreferredSize(new Dimension(columnWidths[col], 45));
-                rowPanel.add(majorLabel, rowGbc);
-                col++;
-
-                if (isAllPositions && appJob != null) {
-                    // Position
-                    rowGbc.gridx = col;
-                    rowGbc.weightx = 1.0;
-                    String positionText = appJob.getModuleCode() + " - " + appJob.getModuleName();
-                    JLabel positionLabel = createCellLabel(positionText);
-                    positionLabel.setPreferredSize(new Dimension(columnWidths[col], 45));
-                    rowPanel.add(positionLabel, rowGbc);
-                    col++;
-                }
-
-                // Status
-                rowGbc.gridx = col;
-                rowGbc.weightx = 1.0;
-                JLabel statusLabel;
-                switch (app.getStatus().toUpperCase()) {
-                    case "ACCEPTED":
-                        statusLabel = createCellLabel("Accepted");
-                        statusLabel.setForeground(new Color(76, 175, 80));
-                        break;
-                    case "REJECTED":
-                        statusLabel = createCellLabel("Rejected");
-                        statusLabel.setForeground(new Color(244, 67, 54));
-                        break;
-                    default:
-                        statusLabel = createCellLabel("Pending");
-                        statusLabel.setForeground(new Color(255, 152, 0));
-                        break;
-                }
-                statusLabel.setPreferredSize(new Dimension(columnWidths[col], 45));
-                rowPanel.add(statusLabel, rowGbc);
-                col++;
-
-                // Action buttons
-                rowGbc.gridx = col;
-                rowGbc.weightx = 1.0;
-                JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
-                actionPanel.setBackground(Color.WHITE);
-                actionPanel.setPreferredSize(new Dimension(columnWidths[col], 45));
-
-                JButton acceptBtn = new JButton("Accept");
-                acceptBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-                acceptBtn.setBackground(new Color(76, 175, 80));
-                acceptBtn.setForeground(Color.WHITE);
-                acceptBtn.setFocusPainted(false);
-                acceptBtn.setBorderPainted(false);
-                acceptBtn.setOpaque(true);
-                acceptBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-                JButton rejectBtn = new JButton("Reject");
-                rejectBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-                rejectBtn.setBackground(new Color(244, 67, 54));
-                rejectBtn.setForeground(Color.WHITE);
-                rejectBtn.setFocusPainted(false);
-                rejectBtn.setBorderPainted(false);
-                rejectBtn.setOpaque(true);
-                rejectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-                final Application finalApp = app;
-                final Profile finalTaProfile = taProfile;
-                final User finalTaUser = taUser;
-                final Job finalAppJob = appJob;
-
-                if (!app.getStatus().equals("PENDING")) {
-                    acceptBtn.setEnabled(false);
-                    acceptBtn.setBackground(new Color(150, 150, 150));
-                    rejectBtn.setEnabled(false);
-                    rejectBtn.setBackground(new Color(150, 150, 150));
-                } else {
-                    acceptBtn.addActionListener(e -> {
-                        int confirm = JOptionPane.showConfirmDialog(this,
-                                "Accept " + (finalTaUser != null ? finalTaUser.getName() : finalApp.getTaEmail()) +
-                                        " for " + (finalAppJob != null ? finalAppJob.getModuleCode() : "position") + "?",
-                                "Confirm Acceptance",
-                                JOptionPane.YES_NO_OPTION);
-                        if (confirm == JOptionPane.YES_OPTION) {
-                            updateApplicationStatus(finalApp.getApplicationId(), "ACCEPTED", finalAppJob);
-                            refreshApplicantsView(finalParentPanel, finalJobCombo);
-                        }
-                    });
-
-                    rejectBtn.addActionListener(e -> {
-                        int confirm = JOptionPane.showConfirmDialog(this,
-                                "Reject " + (finalTaUser != null ? finalTaUser.getName() : finalApp.getTaEmail()) +
-                                        " for " + (finalAppJob != null ? finalAppJob.getModuleCode() : "position") + "?",
-                                "Confirm Rejection",
-                                JOptionPane.YES_NO_OPTION);
-                        if (confirm == JOptionPane.YES_OPTION) {
-                            updateApplicationStatus(finalApp.getApplicationId(), "REJECTED", finalAppJob);
-                            refreshApplicantsView(finalParentPanel, finalJobCombo);
-                        }
-                    });
-                }
-
-                actionPanel.add(acceptBtn);
-                actionPanel.add(rejectBtn);
-                rowPanel.add(actionPanel, rowGbc);
-                col++;
-
-                // View Profile button
-                rowGbc.gridx = col;
-                rowGbc.weightx = 1.0;
-                JPanel profileBtnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
-                profileBtnPanel.setBackground(Color.WHITE);
-                profileBtnPanel.setPreferredSize(new Dimension(columnWidths[col], 45));
-
-                JButton viewProfileBtn = new JButton("View Profile");
-                viewProfileBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-                viewProfileBtn.setBackground(new Color(79, 114, 139));
-                viewProfileBtn.setForeground(Color.WHITE);
-                viewProfileBtn.setFocusPainted(false);
-                viewProfileBtn.setBorderPainted(false);
-                viewProfileBtn.setOpaque(true);
-                viewProfileBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-                viewProfileBtn.addActionListener(e -> {
-                    if (finalTaProfile != null) {
-                        viewTaProfile(finalTaProfile, finalTaUser);
-                    } else {
-                        JOptionPane.showMessageDialog(this,
-                                "No profile data available for this TA.\n\n" +
-                                        "The TA may not have created their profile yet.",
-                                "Profile Not Found",
-                                JOptionPane.INFORMATION_MESSAGE);
-                    }
-                });
-
-                profileBtnPanel.add(viewProfileBtn);
-                rowPanel.add(profileBtnPanel, rowGbc);
-
-                tableContainer.add(rowPanel);
+            String statusText;
+            String statusColor;
+            switch (app.getStatus().toUpperCase()) {
+                case "ACCEPTED":
+                    statusText = "Accepted";
+                    statusColor = "#4CAF50";
+                    break;
+                case "REJECTED":
+                    statusText = "Rejected";
+                    statusColor = "#F44336";
+                    break;
+                default:
+                    statusText = "Pending";
+                    statusColor = "#FF9800";
+                    break;
             }
+            data[i][col++] = "<html><font color='" + statusColor + "'>" + statusText + "</font></html>";
 
-            // 将表格容器放入 JScrollPane，支持水平和垂直滚动
-            JScrollPane scrollPane = new JScrollPane(tableContainer);
-            scrollPane.setBorder(BorderFactory.createEmptyBorder());
-            scrollPane.getViewport().setBackground(Color.WHITE);
-            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-            scrollPane.getHorizontalScrollBar().setUnitIncrement(20);
-
-            tableWrapper.add(scrollPane, BorderLayout.CENTER);
-            contentPanel.add(tableWrapper, BorderLayout.CENTER);
+            // Action 和 Profile - 保存相关对象供渲染器使用
+            data[i][col++] = new Object[]{app, appJob, taProfile, taUser};
+            data[i][col] = new Object[]{app, appJob, taProfile, taUser};
         }
 
-        // Update the parent panel
-        Component[] components = parentPanel.getComponents();
-        for (Component comp : components) {
-            if (comp instanceof JPanel && ((JPanel) comp).getLayout() instanceof BorderLayout) {
-                JPanel oldContent = (JPanel) comp;
-                oldContent.removeAll();
-                oldContent.add(contentPanel, BorderLayout.CENTER);
-                oldContent.revalidate();
-                oldContent.repaint();
-                break;
+        // 创建表格模型
+        DefaultTableModel model = new DefaultTableModel(data, columnNames) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                // Action 和 Profile 列可编辑（用于按钮）
+                int actionCol = isAllPositions ? 6 : 5;
+                int profileCol = isAllPositions ? 7 : 6;
+                return column == actionCol || column == profileCol;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                int actionCol = isAllPositions ? 6 : 5;
+                int profileCol = isAllPositions ? 7 : 6;
+                if (columnIndex == actionCol || columnIndex == profileCol) {
+                    return Object[].class;
+                }
+                return String.class;
+            }
+        };
+
+        JTable table = new JTable(model);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        table.setRowHeight(40);  // 增加行高确保按钮完整显示
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setBorder(BorderFactory.createEmptyBorder());
+
+        // 启用排序
+        table.setAutoCreateRowSorter(true);
+
+        // 关闭自动调整列宽
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+        // 设置表头样式
+        JTableHeader header = table.getTableHeader();
+        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        header.setBackground(new Color(240, 240, 240));
+        header.setForeground(new Color(79, 114, 139));
+        header.setPreferredSize(new Dimension(header.getWidth(), 40));
+
+        // 表头居中
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
+        headerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+        }
+
+        // 设置列宽
+        // 设置列宽
+        int col = 0;
+        table.getColumnModel().getColumn(col++).setPreferredWidth(140);  // Apply Date
+        table.getColumnModel().getColumn(col++).setPreferredWidth(120);  // Name
+        table.getColumnModel().getColumn(col++).setPreferredWidth(100);  // Student ID
+        table.getColumnModel().getColumn(col++).setPreferredWidth(130);  // Major
+
+        if (isAllPositions) {
+            table.getColumnModel().getColumn(col++).setPreferredWidth(180);  // Position
+        }
+
+        table.getColumnModel().getColumn(col++).setPreferredWidth(90);   // Status
+
+        int actionCol = col;
+        table.getColumnModel().getColumn(col++).setPreferredWidth(125);  // Action 列 - 改小一点
+        table.getColumnModel().getColumn(col++).setPreferredWidth(80);   // Profile 列 - 改小一点
+
+// 设置最小宽度
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setMinWidth(60);
+        }
+        table.getColumnModel().getColumn(actionCol).setMinWidth(110);  // Action 列最小宽度也改小
+
+        // 设置单元格渲染器（居中显示，除 Action 和 Profile 列）
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                setHorizontalAlignment(SwingConstants.CENTER);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : UIHelper.getTableAlternateColor());
+                }
+                return c;
+            }
+        };
+
+        int actionColumnIndex = isAllPositions ? 6 : 5;
+        int profileColumnIndex = isAllPositions ? 7 : 6;
+
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            if (i != actionColumnIndex && i != profileColumnIndex) {
+                table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
             }
         }
+
+        // 设置 Action 列的按钮渲染器和编辑器
+        table.getColumnModel().getColumn(actionColumnIndex).setCellRenderer(new ApplicantActionRenderer());
+        table.getColumnModel().getColumn(actionColumnIndex).setCellEditor(new ApplicantActionEditor(this, allApps, jobCombo));
+
+        // 设置 Profile 列的按钮渲染器和编辑器
+        table.getColumnModel().getColumn(profileColumnIndex).setCellRenderer(new ApplicantProfileRenderer());
+        table.getColumnModel().getColumn(profileColumnIndex).setCellEditor(new ApplicantProfileEditor(this));
+
+        // 添加滚动面板
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(20);
+
+        contentPanel.add(scrollPane, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void updateApplicationStatus(String applicationId, String newStatus, Job job) {
         List<Application> apps = FileUtil.loadApplications();
+        Application targetApp = null;
+
         for (Application app : apps) {
             if (app.getApplicationId().equals(applicationId)) {
+                targetApp = app;
                 app.setStatus(newStatus);
                 break;
             }
         }
+
+        if (targetApp == null) {
+            LoggerUtil.logError("Update Application", "Application not found: " + applicationId);
+            return;
+        }
+
         FileUtil.saveApplications(apps);
 
         // If accepting an applicant, check if the position has reached its limit
-        if (newStatus.equals("ACCEPTED")) {
+        if ("ACCEPTED".equals(newStatus) && job != null) {
             // Count how many accepted applicants for this job
             int acceptedCount = 0;
             for (Application app : apps) {
@@ -2017,25 +1962,49 @@ private void viewMyJobs() {
                 }
             }
 
-            // Only close the job if the limit has been reached
+            // Check if the limit has been reached
             if (acceptedCount >= job.getApplicantLimit()) {
                 List<Job> jobs = FileUtil.loadJobs();
                 for (Job j : jobs) {
                     if (j.getJobId().equals(job.getJobId())) {
-                        j.setStatus("CLOSED");
-                        LoggerUtil.logInfo("Job " + job.getJobId() + " closed after reaching applicant limit (" + acceptedCount + "/" + job.getApplicantLimit() + ")");
+                        // Only close if it's currently open
+                        if ("OPEN".equals(j.getStatus())) {
+                            j.setStatus("CLOSED");
+                            LoggerUtil.logInfo("Job " + job.getJobId() + " automatically closed after reaching applicant limit (" + acceptedCount + "/" + job.getApplicantLimit() + ")");
+
+                            JOptionPane.showMessageDialog(this,
+                                    "Position has now reached its applicant limit and has been automatically closed.",
+                                    "Position Full", JOptionPane.INFORMATION_MESSAGE);
+                        }
                         break;
                     }
                 }
                 FileUtil.saveJobs(jobs);
-                JOptionPane.showMessageDialog(this,
-                        "Position has now reached its applicant limit and has been closed.",
-                        "Position Full", JOptionPane.INFORMATION_MESSAGE);
+            }
+
+            // 可选：如果批准后人数已满，自动拒绝该职位的其他待审核申请
+            if (acceptedCount >= job.getApplicantLimit()) {
+                boolean hasRejectedOthers = false;
+                for (Application app : apps) {
+                    if (app.getJobId().equals(job.getJobId()) && "PENDING".equals(app.getStatus())) {
+                        app.setStatus("REJECTED");
+                        hasRejectedOthers = true;
+                    }
+                }
+                if (hasRejectedOthers) {
+                    FileUtil.saveApplications(apps);
+                    LoggerUtil.logInfo("Auto-rejected pending applications for job " + job.getJobId() + " (limit reached)");
+                }
             }
         }
 
         LoggerUtil.logUpdate("Application", applicationId + " -> " + newStatus);
-        JOptionPane.showMessageDialog(this, "Application status updated to " + newStatus + "!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+        String message = "Application status updated to " + newStatus + "!";
+        if ("ACCEPTED".equals(newStatus)) {
+            message += "\n\nTA: " + targetApp.getTaEmail();
+        }
+        JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
 
     /**
@@ -2378,7 +2347,7 @@ private void editPostedPosition(Job job) {
 
         // 表头 - 固定高度
         JPanel headerPanel = new JPanel(new GridLayout(1, 5, 5, 0));
-        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBackground(UIHelper.getHeaderBackgroundColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
         headerPanel.setPreferredSize(new Dimension(0, 32));
@@ -2589,7 +2558,7 @@ private void editPostedPosition(Job job) {
 
         // Header - 固定高度32px
         JPanel headerPanel = new JPanel(new GridLayout(1, 4, 5, 0));
-        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBackground(UIHelper.getHeaderBackgroundColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
         headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
         headerPanel.setPreferredSize(new Dimension(0, 32));
@@ -2773,7 +2742,7 @@ private void editPostedPosition(Job job) {
         if (jobs == null || jobs.isEmpty()) {
             JLabel emptyLabel = new JLabel("This TA is not assigned to any positions.", SwingConstants.CENTER);
             emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(UIHelper.getSecondaryTextColor());
             panel.add(emptyLabel, BorderLayout.CENTER);
             setContent(panel);
             return;
@@ -2792,7 +2761,7 @@ private void editPostedPosition(Job job) {
 
         // Header
         JPanel headerPanel = new JPanel(new GridLayout(1, 5, 5, 0));
-        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBackground(UIHelper.getHeaderBackgroundColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         headerPanel.add(createHeaderLabel("Module Code"));
         headerPanel.add(createHeaderLabel("Module Name"));
@@ -2897,7 +2866,7 @@ private void editPostedPosition(Job job) {
         if (taWorkloadList.isEmpty()) {
             JLabel emptyLabel = new JLabel("No TAs registered yet.", SwingConstants.CENTER);
             emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(UIHelper.getSecondaryTextColor());
             panel.add(emptyLabel, BorderLayout.CENTER);
             setContent(panel);
             return;
@@ -2918,7 +2887,7 @@ private void editPostedPosition(Job job) {
 
         // Header
         JPanel headerPanel = new JPanel(new GridLayout(1, 5, 10, 0));
-        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBackground(UIHelper.getHeaderBackgroundColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         headerPanel.setMaximumSize(new Dimension(800, 45));
         headerPanel.add(createHeaderLabel("TA Name"));
@@ -3059,7 +3028,7 @@ private void editPostedPosition(Job job) {
         if (info.assignedJobs.isEmpty()) {
             JLabel emptyLabel = new JLabel("No positions assigned.");
             emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(UIHelper.getSecondaryTextColor());
             emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             mainPanel.add(emptyLabel);
         } else {
@@ -3193,7 +3162,7 @@ private void editPostedPosition(Job job) {
 
         // Header
         JPanel headerPanel = new JPanel(new GridLayout(1, 7, 5, 0));
-        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBackground(UIHelper.getHeaderBackgroundColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         headerPanel.add(createHeaderLabel("Job ID"));
         headerPanel.add(createHeaderLabel("Module Code"));
@@ -3228,7 +3197,7 @@ private void editPostedPosition(Job job) {
 
         // Header
         JPanel headerPanel = new JPanel(new GridLayout(1, 7, 5, 0));
-        headerPanel.setBackground(new Color(240, 240, 240));
+        headerPanel.setBackground(UIHelper.getHeaderBackgroundColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         headerPanel.add(createHeaderLabel("Job ID"));
         headerPanel.add(createHeaderLabel("Module Code"));
@@ -3254,7 +3223,7 @@ private void editPostedPosition(Job job) {
         if (filteredJobs.isEmpty()) {
             JLabel emptyLabel = new JLabel("No positions found.", SwingConstants.CENTER);
             emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(UIHelper.getSecondaryTextColor());
             tablePanel.add(emptyLabel);
         } else {
             for (Job job : filteredJobs) {
@@ -3706,6 +3675,460 @@ private void editPostedPosition(Job job) {
         @Override
         public Object getCellEditorValue() {
             return currentJob;
+        }
+    }
+    /**
+     * 申请按钮渲染器
+     */
+    class ApplyButtonRenderer extends JPanel implements TableCellRenderer {
+        private JButton applyBtn;
+
+        public ApplyButtonRenderer() {
+            setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            setOpaque(true);
+
+            applyBtn = new JButton();
+            applyBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            applyBtn.setForeground(Color.WHITE);
+            applyBtn.setFocusPainted(false);
+            applyBtn.setBorderPainted(false);
+            applyBtn.setOpaque(true);
+            applyBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            applyBtn.setPreferredSize(new Dimension(80, 30));
+
+            add(applyBtn);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus,
+                                                       int row, int column) {
+            if (value instanceof Object[]) {
+                Object[] data = (Object[]) value;
+                Job job = (Job) data[0];
+                String userAppStatus = (String) data[1];
+
+                List<Application> allApps = FileUtil.loadApplications();
+                int acceptedCount = (int) allApps.stream()
+                        .filter(app -> app.getJobId().equals(job.getJobId()) && "ACCEPTED".equals(app.getStatus()))
+                        .count();
+                boolean reachedLimit = acceptedCount >= job.getApplicantLimit();
+
+                if (userAppStatus != null) {
+                    applyBtn.setEnabled(false);
+                    if ("ACCEPTED".equals(userAppStatus)) {
+                        applyBtn.setText("Accepted");
+                        applyBtn.setBackground(new Color(76, 175, 80));
+                    } else {
+                        applyBtn.setText("Pending");
+                        applyBtn.setBackground(new Color(255, 152, 0));
+                    }
+                } else if (reachedLimit) {
+                    applyBtn.setEnabled(false);
+                    applyBtn.setText("Full");
+                    applyBtn.setBackground(new Color(150, 150, 150));
+                } else {
+                    applyBtn.setEnabled(true);
+                    applyBtn.setText("Apply");
+                    applyBtn.setBackground(new Color(76, 175, 80));
+                }
+            }
+
+            if (isSelected) {
+                setBackground(table.getSelectionBackground());
+            } else {
+                setBackground(row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
+            }
+            return this;
+        }
+    }
+
+    /**
+     * 申请按钮编辑器
+     */
+    class ApplyButtonEditor extends AbstractCellEditor implements TableCellEditor {
+        private JPanel panel;
+        private JButton applyBtn;
+        private Job currentJob;
+        private String currentUserAppStatus;
+        private DashboardFrame frame;
+        private List<Application> allApps;
+
+        public ApplyButtonEditor(DashboardFrame frame, List<Application> allApps) {
+            this.frame = frame;
+            this.allApps = allApps;
+
+            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            panel.setOpaque(true);
+
+            applyBtn = new JButton();
+            applyBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            applyBtn.setForeground(Color.WHITE);
+            applyBtn.setFocusPainted(false);
+            applyBtn.setBorderPainted(false);
+            applyBtn.setOpaque(true);
+            applyBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            applyBtn.setPreferredSize(new Dimension(80, 30));
+
+            applyBtn.addActionListener(e -> {
+                if (currentJob != null && currentUserAppStatus == null) {
+                    int acceptedCount = (int) allApps.stream()
+                            .filter(app -> app.getJobId().equals(currentJob.getJobId()) && "ACCEPTED".equals(app.getStatus()))
+                            .count();
+
+                    int confirm = JOptionPane.showConfirmDialog(frame,
+                            "Apply for " + currentJob.getModuleCode() + " - " + currentJob.getModuleName() + "?\n" +
+                                    "Current accepted applicants: " + acceptedCount + " / " + currentJob.getApplicantLimit(),
+                            "Confirm Application",
+                            JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        frame.submitApplication(currentJob.getJobId());
+                    }
+                }
+                fireEditingStopped();
+            });
+
+            panel.add(applyBtn);
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                                                     boolean isSelected, int row, int column) {
+            if (value instanceof Object[]) {
+                Object[] data = (Object[]) value;
+                currentJob = (Job) data[0];
+                currentUserAppStatus = (String) data[1];
+            }
+
+            int acceptedCount = (int) allApps.stream()
+                    .filter(app -> app.getJobId().equals(currentJob.getJobId()) && "ACCEPTED".equals(app.getStatus()))
+                    .count();
+            boolean reachedLimit = acceptedCount >= currentJob.getApplicantLimit();
+
+            if (currentUserAppStatus != null) {
+                applyBtn.setEnabled(false);
+                if ("ACCEPTED".equals(currentUserAppStatus)) {
+                    applyBtn.setText("Accepted");
+                    applyBtn.setBackground(new Color(76, 175, 80));
+                } else {
+                    applyBtn.setText("Pending");
+                    applyBtn.setBackground(new Color(255, 152, 0));
+                }
+            } else if (reachedLimit) {
+                applyBtn.setEnabled(false);
+                applyBtn.setText("Full");
+                applyBtn.setBackground(new Color(150, 150, 150));
+            } else {
+                applyBtn.setEnabled(true);
+                applyBtn.setText("Apply");
+                applyBtn.setBackground(new Color(76, 175, 80));
+            }
+
+            panel.setBackground(table.getSelectionBackground());
+            return panel;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return new Object[]{currentJob, currentUserAppStatus};
+        }
+    }
+    /**
+     * 申请人操作按钮渲染器
+     */
+    class ApplicantActionRenderer extends JPanel implements TableCellRenderer {
+        private JButton acceptBtn;
+        private JButton rejectBtn;
+
+        public ApplicantActionRenderer() {
+            setLayout(new FlowLayout(FlowLayout.CENTER, 3, 5));  // 减小间距
+            setOpaque(true);
+
+            acceptBtn = new JButton("Accept");
+            acceptBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));  // 字体改小
+            acceptBtn.setBackground(new Color(76, 175, 80));
+            acceptBtn.setForeground(Color.WHITE);
+            acceptBtn.setFocusPainted(false);
+            acceptBtn.setBorderPainted(false);
+            acceptBtn.setOpaque(true);
+            acceptBtn.setMargin(new Insets(2, 5, 2, 5));  // 减小内边距
+            acceptBtn.setPreferredSize(new Dimension(55, 25));  // 按钮改小
+
+            rejectBtn = new JButton("Reject");
+            rejectBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));  // 字体改小
+            rejectBtn.setBackground(new Color(244, 67, 54));
+            rejectBtn.setForeground(Color.WHITE);
+            rejectBtn.setFocusPainted(false);
+            rejectBtn.setBorderPainted(false);
+            rejectBtn.setOpaque(true);
+            rejectBtn.setMargin(new Insets(2, 5, 2, 5));  // 减小内边距
+            rejectBtn.setPreferredSize(new Dimension(55, 25));  // 按钮改小
+
+            add(acceptBtn);
+            add(rejectBtn);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus,
+                                                       int row, int column) {
+            if (value instanceof Object[]) {
+                Object[] data = (Object[]) value;
+                Application app = (Application) data[0];
+
+                if (!"PENDING".equals(app.getStatus())) {
+                    acceptBtn.setEnabled(false);
+                    acceptBtn.setBackground(new Color(150, 150, 150));
+                    rejectBtn.setEnabled(false);
+                    rejectBtn.setBackground(new Color(150, 150, 150));
+                } else {
+                    acceptBtn.setEnabled(true);
+                    acceptBtn.setBackground(new Color(76, 175, 80));
+                    rejectBtn.setEnabled(true);
+                    rejectBtn.setBackground(new Color(244, 67, 54));
+                }
+            }
+
+            if (isSelected) {
+                setBackground(table.getSelectionBackground());
+            } else {
+                setBackground(row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
+            }
+            return this;
+        }
+    }
+
+    /**
+     * 申请人操作按钮编辑器
+     */
+    class ApplicantActionEditor extends AbstractCellEditor implements TableCellEditor {
+        private JPanel panel;
+        private JButton acceptBtn;
+        private JButton rejectBtn;
+        private Application currentApp;
+        private Job currentJob;
+        private Profile currentProfile;
+        private User currentUser;
+        private DashboardFrame frame;
+        private List<Application> allApps;
+        private JComboBox<Object> jobCombo;
+
+        public ApplicantActionEditor(DashboardFrame frame, List<Application> allApps, JComboBox<Object> jobCombo) {
+            this.frame = frame;
+            this.allApps = allApps;
+            this.jobCombo = jobCombo;
+
+            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 5));  // 减小间距
+            panel.setOpaque(true);
+
+            acceptBtn = new JButton("Accept");
+            acceptBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));  // 字体改小
+            acceptBtn.setBackground(new Color(76, 175, 80));
+            acceptBtn.setForeground(Color.WHITE);
+            acceptBtn.setFocusPainted(false);
+            acceptBtn.setBorderPainted(false);
+            acceptBtn.setOpaque(true);
+            acceptBtn.setMargin(new Insets(2, 5, 2, 5));  // 减小内边距
+            acceptBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            acceptBtn.setPreferredSize(new Dimension(55, 25));  // 按钮改小
+
+            rejectBtn = new JButton("Reject");
+            rejectBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));  // 字体改小
+            rejectBtn.setBackground(new Color(244, 67, 54));
+            rejectBtn.setForeground(Color.WHITE);
+            rejectBtn.setFocusPainted(false);
+            rejectBtn.setBorderPainted(false);
+            rejectBtn.setOpaque(true);
+            rejectBtn.setMargin(new Insets(2, 5, 2, 5));  // 减小内边距
+            rejectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            rejectBtn.setPreferredSize(new Dimension(55, 25));  // 按钮改小
+
+            acceptBtn.addActionListener(e -> {
+                if (currentApp != null) {
+                    String taName = currentUser != null ? currentUser.getName() : currentApp.getTaEmail();
+                    String jobName = currentJob != null ? currentJob.getModuleCode() : "position";
+
+                    int confirm = JOptionPane.showConfirmDialog(frame,
+                            "Accept " + taName + " for " + jobName + "?",
+                            "Confirm Acceptance",
+                            JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        frame.updateApplicationStatus(currentApp.getApplicationId(), "ACCEPTED", currentJob);
+                        // 刷新视图
+                        Container parent = jobCombo.getParent().getParent();
+                        if (parent instanceof JPanel) {
+                            Component[] comps = ((JPanel) parent).getComponents();
+                            for (Component comp : comps) {
+                                if (comp instanceof JPanel && ((JPanel) comp).getLayout() instanceof BorderLayout) {
+                                    frame.refreshApplicantsView((JPanel) comp, jobCombo);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                fireEditingStopped();
+            });
+
+            rejectBtn.addActionListener(e -> {
+                if (currentApp != null) {
+                    String taName = currentUser != null ? currentUser.getName() : currentApp.getTaEmail();
+                    String jobName = currentJob != null ? currentJob.getModuleCode() : "position";
+
+                    int confirm = JOptionPane.showConfirmDialog(frame,
+                            "Reject " + taName + " for " + jobName + "?",
+                            "Confirm Rejection",
+                            JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        frame.updateApplicationStatus(currentApp.getApplicationId(), "REJECTED", currentJob);
+                        // 刷新视图
+                        Container parent = jobCombo.getParent().getParent();
+                        if (parent instanceof JPanel) {
+                            Component[] comps = ((JPanel) parent).getComponents();
+                            for (Component comp : comps) {
+                                if (comp instanceof JPanel && ((JPanel) comp).getLayout() instanceof BorderLayout) {
+                                    frame.refreshApplicantsView((JPanel) comp, jobCombo);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                fireEditingStopped();
+            });
+
+            panel.add(acceptBtn);
+            panel.add(rejectBtn);
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                                                     boolean isSelected, int row, int column) {
+            if (value instanceof Object[]) {
+                Object[] data = (Object[]) value;
+                currentApp = (Application) data[0];
+                currentJob = (Job) data[1];
+                currentProfile = (Profile) data[2];
+                currentUser = (User) data[3];
+
+                if (!"PENDING".equals(currentApp.getStatus())) {
+                    acceptBtn.setEnabled(false);
+                    acceptBtn.setBackground(new Color(150, 150, 150));
+                    rejectBtn.setEnabled(false);
+                    rejectBtn.setBackground(new Color(150, 150, 150));
+                } else {
+                    acceptBtn.setEnabled(true);
+                    acceptBtn.setBackground(new Color(76, 175, 80));
+                    rejectBtn.setEnabled(true);
+                    rejectBtn.setBackground(new Color(244, 67, 54));
+                }
+            }
+
+            panel.setBackground(table.getSelectionBackground());
+            return panel;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return new Object[]{currentApp, currentJob, currentProfile, currentUser};
+        }
+    }
+
+    /**
+     * 查看 Profile 按钮渲染器
+     */
+    class ApplicantProfileRenderer extends JPanel implements TableCellRenderer {
+        private JButton viewBtn;
+
+        public ApplicantProfileRenderer() {
+            setLayout(new FlowLayout(FlowLayout.CENTER, 0, 5));
+            setOpaque(true);
+
+            viewBtn = new JButton("Profile");
+            viewBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));  // 字体改小
+            viewBtn.setBackground(new Color(79, 114, 139));
+            viewBtn.setForeground(Color.WHITE);
+            viewBtn.setFocusPainted(false);
+            viewBtn.setBorderPainted(false);
+            viewBtn.setOpaque(true);
+            viewBtn.setMargin(new Insets(2, 8, 2, 8));  // 减小内边距
+            viewBtn.setPreferredSize(new Dimension(60, 25));  // 按钮改小
+
+            add(viewBtn);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus,
+                                                       int row, int column) {
+            if (isSelected) {
+                setBackground(table.getSelectionBackground());
+            } else {
+                setBackground(row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
+            }
+            return this;
+        }
+    }
+
+    /**
+     * 查看 Profile 按钮编辑器
+     */
+    class ApplicantProfileEditor extends AbstractCellEditor implements TableCellEditor {
+        private JPanel panel;
+        private JButton viewBtn;
+        private Profile currentProfile;
+        private User currentUser;
+        private DashboardFrame frame;
+
+        public ApplicantProfileEditor(DashboardFrame frame) {
+            this.frame = frame;
+
+            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 5));
+            panel.setOpaque(true);
+
+            viewBtn = new JButton("Profile");
+            viewBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));  // 字体改小
+            viewBtn.setBackground(new Color(79, 114, 139));
+            viewBtn.setForeground(Color.WHITE);
+            viewBtn.setFocusPainted(false);
+            viewBtn.setBorderPainted(false);
+            viewBtn.setOpaque(true);
+            viewBtn.setMargin(new Insets(2, 8, 2, 8));  // 减小内边距
+            viewBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            viewBtn.setPreferredSize(new Dimension(60, 25));  // 按钮改小
+
+            viewBtn.addActionListener(e -> {
+                if (currentProfile != null) {
+                    frame.viewTaProfile(currentProfile, currentUser);
+                } else {
+                    JOptionPane.showMessageDialog(frame,
+                            "No profile data available for this TA.\n\n" +
+                                    "The TA may not have created their profile yet.",
+                            "Profile Not Found",
+                            JOptionPane.INFORMATION_MESSAGE);
+                }
+                fireEditingStopped();
+            });
+
+            panel.add(viewBtn);
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                                                     boolean isSelected, int row, int column) {
+            if (value instanceof Object[]) {
+                Object[] data = (Object[]) value;
+                currentProfile = (Profile) data[2];
+                currentUser = (User) data[3];
+            }
+
+            panel.setBackground(table.getSelectionBackground());
+            return panel;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return new Object[]{null, null, currentProfile, currentUser};
         }
     }
 }
