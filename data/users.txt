@@ -22,3 +22,5 @@ admin@bupt.edu,admin123,Admin,系统管理员
 019@bupt.edu,12345678,TA,Cheng Yu
 020@bupt.edu,12345678,TA,Lu Han
 2398517799@qq.com,12345678,TA,Yinan Gao
+239@qq.com,12345678,TA,1223
+123@qq.com,12345678,TA,123

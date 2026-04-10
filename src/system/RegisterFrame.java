@@ -1,13 +1,11 @@
 package system;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Registration window for the TA Recruitment System.
- * Allows a user to create a new account.
- */
 public class RegisterFrame extends JFrame {
     private JTextField emailField;
     private JPasswordField passwordField;
@@ -18,312 +16,375 @@ public class RegisterFrame extends JFrame {
     private JComboBox<String> roleCombo;
     private List<User> users;
 
-    /**
-     * Constructs the registration frame.
-     *
-     * @param users the list of existing users (passed from the main application)
-     */
+    private JLabel emailErrorLabel;
+    private JLabel passwordErrorLabel;
+    private JLabel confirmErrorLabel;
+    private JLabel nameErrorLabel;
+
+    private boolean emailValid = false;
+    private boolean passwordValid = false;
+    private boolean confirmValid = false;
+    private boolean nameValid = false;
+
     public RegisterFrame(List<User> users) {
         this.users = users;
 
         setTitle("Register - TA Recruitment System");
-        setSize(600, 550);
+        setSize(700, 650);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setBackground(UIHelper.BACKGROUND_COLOR);
 
         initUI();
         setVisible(true);
     }
 
-    /**
-     * Creates a password field with an eye toggle button.
-     *
-     * @param field   the password field to be decorated
-     * @param toggle  the toggle button that controls visibility
-     * @return a panel containing the password field and the toggle button
-     */
-    private JPanel createPasswordPanel(JPasswordField field, JToggleButton toggle) {
+    private JPanel createPasswordPanel(boolean isConfirm) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        field.setPreferredSize(new Dimension(250, 35));
-        field.setEchoChar('●');  // bullet character
+        JPasswordField field = UIHelper.createPasswordField();
+        field.setPreferredSize(new Dimension(280, 45));
+        field.setEchoChar('●');
 
-        // Set a font that supports emojis (adjust as needed for your OS)
-        Font emojiFont = new Font("Segoe UI Emoji", Font.PLAIN, 16);
+        JToggleButton toggle = new JToggleButton();
+        Font emojiFont = new Font("Segoe UI Emoji", Font.PLAIN, 18);
         toggle.setFont(emojiFont);
         toggle.setFocusPainted(false);
         toggle.setBorderPainted(false);
         toggle.setContentAreaFilled(false);
         toggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Define emoji for open and closed states
-        final String OPEN_EYE = "👁️";      // open eye
-        final String CLOSED_EYE = "\uD83D\uDE48";  // close eye
+        final String OPEN_EYE = "👁️";
+        final String CLOSED_EYE = "\uD83D\uDE48";
 
-        // Initially set closed eye (password hidden)
         toggle.setText(CLOSED_EYE);
         toggle.setSelected(false);
 
         toggle.addActionListener(e -> {
-            boolean show = toggle.isSelected();
-            if (show) {
-                toggle.setText(OPEN_EYE);   // show open eye
-                field.setEchoChar((char) 0); // display plain text
+            if (toggle.isSelected()) {
+                toggle.setText(OPEN_EYE);
+                field.setEchoChar((char) 0);
             } else {
-                toggle.setText(CLOSED_EYE); // show closed eye
-                field.setEchoChar('●');      // mask with bullet
+                toggle.setText(CLOSED_EYE);
+                field.setEchoChar('●');
             }
         });
 
         panel.add(field, BorderLayout.CENTER);
         panel.add(toggle, BorderLayout.EAST);
+
+        if (isConfirm) {
+            confirmPasswordField = field;
+            confirmToggleBtn = toggle;
+        } else {
+            passwordField = field;
+            passwordToggleBtn = toggle;
+        }
+
         return panel;
     }
 
-    /**
-     * Initializes the user interface components.
-     */
+    private JLabel createErrorLabel() {
+        JLabel label = new JLabel(" ");
+        label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));  // 增大错误提示字体
+        label.setForeground(new Color(220, 53, 69));
+        return label;
+    }
+
+    private void updateRegisterButtonState(JButton registerBtn) {
+        registerBtn.setEnabled(emailValid && passwordValid && confirmValid && nameValid);
+    }
+
+    private void setupEmailValidation(JButton registerBtn) {
+        emailField.getDocument().addDocumentListener(new DocumentListener() {
+            private void validate() {
+                String email = emailField.getText().trim();
+                if (email.isEmpty()) {
+                    emailErrorLabel.setText("Email is required");
+                    emailValid = false;
+                } else if (!isValidEmail(email)) {
+                    emailErrorLabel.setText("Invalid email format (e.g., name@domain.com)");
+                    emailValid = false;
+                } else {
+                    boolean duplicate = users.stream().anyMatch(u -> u.getEmail().equals(email));
+                    if (duplicate) {
+                        emailErrorLabel.setText("Email already registered");
+                        emailValid = false;
+                    } else {
+                        emailErrorLabel.setText(" ");
+                        emailValid = true;
+                    }
+                }
+                updateRegisterButtonState(registerBtn);
+            }
+
+            @Override public void insertUpdate(DocumentEvent e) { validate(); }
+            @Override public void removeUpdate(DocumentEvent e) { validate(); }
+            @Override public void changedUpdate(DocumentEvent e) { validate(); }
+        });
+    }
+
+    private void setupPasswordValidation(JButton registerBtn) {
+        DocumentListener listener = new DocumentListener() {
+            private void validate() {
+                String password = new String(passwordField.getPassword());
+                if (password.isEmpty()) {
+                    passwordErrorLabel.setText("Password is required");
+                    passwordValid = false;
+                } else if (password.length() < 8) {
+                    passwordErrorLabel.setText("Password must be at least 8 characters");
+                    passwordValid = false;
+                } else {
+                    passwordErrorLabel.setText(" ");
+                    passwordValid = true;
+                }
+                validateConfirmPassword();
+                updateRegisterButtonState(registerBtn);
+            }
+
+            @Override public void insertUpdate(DocumentEvent e) { validate(); }
+            @Override public void removeUpdate(DocumentEvent e) { validate(); }
+            @Override public void changedUpdate(DocumentEvent e) { validate(); }
+        };
+        passwordField.getDocument().addDocumentListener(listener);
+    }
+
+    private void setupConfirmPasswordValidation(JButton registerBtn) {
+        DocumentListener listener = new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { validateConfirmPassword(); updateRegisterButtonState(registerBtn); }
+            @Override public void removeUpdate(DocumentEvent e) { validateConfirmPassword(); updateRegisterButtonState(registerBtn); }
+            @Override public void changedUpdate(DocumentEvent e) { validateConfirmPassword(); updateRegisterButtonState(registerBtn); }
+        };
+        confirmPasswordField.getDocument().addDocumentListener(listener);
+    }
+
+    private void validateConfirmPassword() {
+        String password = new String(passwordField.getPassword());
+        String confirm = new String(confirmPasswordField.getPassword());
+        if (confirm.isEmpty()) {
+            confirmErrorLabel.setText("Please confirm your password");
+            confirmValid = false;
+        } else if (!password.equals(confirm)) {
+            confirmErrorLabel.setText("Passwords do not match");
+            confirmValid = false;
+        } else {
+            confirmErrorLabel.setText(" ");
+            confirmValid = true;
+        }
+    }
+
+    private void setupNameValidation(JButton registerBtn) {
+        nameField.getDocument().addDocumentListener(new DocumentListener() {
+            private void validate() {
+                String name = nameField.getText().trim();
+                if (name.isEmpty()) {
+                    nameErrorLabel.setText("Full name is required");
+                    nameValid = false;
+                } else {
+                    nameErrorLabel.setText(" ");
+                    nameValid = true;
+                }
+                updateRegisterButtonState(registerBtn);
+            }
+
+            @Override public void insertUpdate(DocumentEvent e) { validate(); }
+            @Override public void removeUpdate(DocumentEvent e) { validate(); }
+            @Override public void changedUpdate(DocumentEvent e) { validate(); }
+        });
+    }
+
+    private boolean isValidEmail(String email) {
+        if (email == null || email.isEmpty()) return false;
+        String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+        return email.matches(emailRegex);
+    }
+
     private void initUI() {
-        JPanel mainPanel = new JPanel();
-        mainPanel.setBackground(new Color(245, 245, 245));
-        mainPanel.setLayout(new GridBagLayout());
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(UIHelper.BACKGROUND_COLOR);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(15, 15, 15, 15);
-
-        // Card panel with white background and padding
-        JPanel cardPanel = new JPanel();
-        cardPanel.setBackground(Color.WHITE);
-        cardPanel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
+        JPanel cardPanel = UIHelper.createCardPanel();
         cardPanel.setLayout(new GridBagLayout());
 
         GridBagConstraints cardGbc = new GridBagConstraints();
-        cardGbc.insets = new Insets(8, 8, 8, 8);
+
+        cardGbc.insets = new Insets(8, 15, 8, 15);
         cardGbc.fill = GridBagConstraints.HORIZONTAL;
+        cardGbc.anchor = GridBagConstraints.WEST;
 
         int row = 0;
 
-        // Title
-        JLabel titleLabel = new JLabel("Create Account");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        titleLabel.setForeground(new Color(79, 114, 139));
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        JLabel titleLabel = UIHelper.createTitle("Create Account");
         cardGbc.gridy = row++;
         cardGbc.gridx = 0;
         cardGbc.gridwidth = 2;
+        cardGbc.insets = new Insets(15, 15, 25, 15);  // 标题下方加大间距
         cardPanel.add(titleLabel, cardGbc);
-
+        cardGbc.insets = new Insets(8, 15, 8, 15);
         cardGbc.gridwidth = 1;
-        cardGbc.anchor = GridBagConstraints.WEST;
 
-        // Email field
         JLabel emailLabel = new JLabel("Email Address");
-        emailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        emailLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));  // 字体增大
         cardGbc.gridy = row;
         cardGbc.gridx = 0;
         cardPanel.add(emailLabel, cardGbc);
 
-        emailField = new JTextField();
-        emailField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        emailField.setPreferredSize(new Dimension(250, 35));
+        emailField = UIHelper.createTextField();
+        emailField.setPreferredSize(new Dimension(280, 45));
         cardGbc.gridx = 1;
         cardPanel.add(emailField, cardGbc);
         row++;
 
-        // Password field with eye toggle
+        emailErrorLabel = createErrorLabel();
+        cardGbc.gridy = row++;
+        cardGbc.gridx = 1;
+        cardGbc.insets = new Insets(0, 15, 10, 15);  // 错误标签与下一行间距
+        cardPanel.add(emailErrorLabel, cardGbc);
+        cardGbc.insets = new Insets(8, 15, 8, 15);
+
         JLabel passwordLabel = new JLabel("Password");
-        passwordLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        passwordLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         cardGbc.gridy = row;
         cardGbc.gridx = 0;
         cardPanel.add(passwordLabel, cardGbc);
 
-        passwordField = new JPasswordField();
-        passwordToggleBtn = new JToggleButton();
-        JPanel passwordPanel = createPasswordPanel(passwordField, passwordToggleBtn);
+        JPanel passwordPanel = createPasswordPanel(false);
         cardGbc.gridx = 1;
         cardPanel.add(passwordPanel, cardGbc);
         row++;
 
-        // Confirm Password field with eye toggle
+        passwordErrorLabel = createErrorLabel();
+        cardGbc.gridy = row++;
+        cardGbc.gridx = 1;
+        cardGbc.insets = new Insets(0, 15, 10, 15);
+        cardPanel.add(passwordErrorLabel, cardGbc);
+        cardGbc.insets = new Insets(8, 15, 8, 15);
+
         JLabel confirmLabel = new JLabel("Confirm Password");
-        confirmLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        confirmLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         cardGbc.gridy = row;
         cardGbc.gridx = 0;
         cardPanel.add(confirmLabel, cardGbc);
 
-        confirmPasswordField = new JPasswordField();
-        confirmToggleBtn = new JToggleButton();
-        JPanel confirmPanel = createPasswordPanel(confirmPasswordField, confirmToggleBtn);
+        JPanel confirmPanel = createPasswordPanel(true);
         cardGbc.gridx = 1;
         cardPanel.add(confirmPanel, cardGbc);
         row++;
 
-        // Full Name field
+        confirmErrorLabel = createErrorLabel();
+        cardGbc.gridy = row++;
+        cardGbc.gridx = 1;
+        cardGbc.insets = new Insets(0, 15, 10, 15);
+        cardPanel.add(confirmErrorLabel, cardGbc);
+        cardGbc.insets = new Insets(8, 15, 8, 15);
+
         JLabel nameLabel = new JLabel("Full Name");
-        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        nameLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         cardGbc.gridy = row;
         cardGbc.gridx = 0;
         cardPanel.add(nameLabel, cardGbc);
 
-        nameField = new JTextField();
-        nameField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        nameField.setPreferredSize(new Dimension(250, 35));
+        nameField = UIHelper.createTextField();
+        nameField.setPreferredSize(new Dimension(280, 45));
         cardGbc.gridx = 1;
         cardPanel.add(nameField, cardGbc);
         row++;
 
-        // Role selection
+        nameErrorLabel = createErrorLabel();
+        cardGbc.gridy = row++;
+        cardGbc.gridx = 1;
+        cardGbc.insets = new Insets(0, 15, 10, 15);
+        cardPanel.add(nameErrorLabel, cardGbc);
+        cardGbc.insets = new Insets(8, 15, 8, 15);
+
         JLabel roleLabel = new JLabel("Role");
-        roleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        roleLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         cardGbc.gridy = row;
         cardGbc.gridx = 0;
         cardPanel.add(roleLabel, cardGbc);
 
         roleCombo = new JComboBox<>(new String[]{"TA", "MO", "Admin"});
-        roleCombo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        roleCombo.setPreferredSize(new Dimension(250, 35));
+        roleCombo.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        roleCombo.setPreferredSize(new Dimension(280, 45));
+        roleCombo.setBackground(Color.WHITE);
         cardGbc.gridx = 1;
         cardPanel.add(roleCombo, cardGbc);
         row++;
 
-        // Button panel with Register and Back buttons
+        cardGbc.gridy = row++;
+        cardGbc.gridx = 0;
+        cardGbc.gridwidth = 2;
+        cardGbc.insets = new Insets(20, 15, 20, 15);
+        cardPanel.add(Box.createVerticalStrut(10), cardGbc);
+        cardGbc.insets = new Insets(8, 15, 8, 15);
+        cardGbc.gridwidth = 1;
+
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
-        buttonPanel.setLayout(new GridLayout(1, 2, 15, 0));
+        buttonPanel.setLayout(new GridLayout(1, 2, 20, 0));
 
-        JButton registerBtn = new JButton("Register");
-        registerBtn.setBackground(new Color(76, 175, 80));
-        registerBtn.setForeground(Color.WHITE);
-        registerBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        registerBtn.setFocusPainted(false);
-        registerBtn.setBorderPainted(false);
-        registerBtn.setOpaque(true);
-        registerBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton registerBtn = UIHelper.createButton("Register", UIHelper.SUCCESS_COLOR);
+        JButton backBtn = UIHelper.createButton("Back to Login", UIHelper.SECONDARY_COLOR);
 
-        JButton backBtn = new JButton("Back to Login");
-        backBtn.setBackground(new Color(96, 125, 139));
-        backBtn.setForeground(Color.WHITE);
-        backBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        backBtn.setFocusPainted(false);
-        backBtn.setBorderPainted(false);
-        backBtn.setOpaque(true);
-        backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // Hover effects
-        registerBtn.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                registerBtn.setBackground(new Color(56, 155, 60));
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                registerBtn.setBackground(new Color(76, 175, 80));
-            }
-        });
-
-        backBtn.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                backBtn.setBackground(new Color(76, 105, 119));
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                backBtn.setBackground(new Color(96, 125, 139));
-            }
-        });
+        registerBtn.setEnabled(false);
 
         buttonPanel.add(registerBtn);
         buttonPanel.add(backBtn);
 
-        // Add button panel to the card
         cardGbc.gridy = row;
         cardGbc.gridx = 0;
         cardGbc.gridwidth = 2;
         cardGbc.fill = GridBagConstraints.HORIZONTAL;
         cardPanel.add(buttonPanel, cardGbc);
 
-        // Register button action
+        setupEmailValidation(registerBtn);
+        setupPasswordValidation(registerBtn);
+        setupConfirmPasswordValidation(registerBtn);
+        setupNameValidation(registerBtn);
+
         registerBtn.addActionListener(e -> register());
-        // Back button action: close this frame and open login frame
         backBtn.addActionListener(e -> {
             dispose();
             new LoginFrame();
         });
 
-        // Place the card panel into the main panel
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        mainPanel.add(cardPanel, gbc);
+        JScrollPane scrollPane = UIHelper.createScrollPane(cardPanel);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
-        add(mainPanel);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+        JPanel wrapper = new JPanel(new GridBagLayout());
+        wrapper.setBackground(UIHelper.BACKGROUND_COLOR);
+        GridBagConstraints wgbc = new GridBagConstraints();
+        wgbc.insets = new Insets(20, 20, 20, 20);
+        wgbc.fill = GridBagConstraints.BOTH;
+        wgbc.weightx = 1;
+        wgbc.weighty = 1;
+        wrapper.add(mainPanel, wgbc);
+
+        add(wrapper);
     }
 
-    /**
-     * Validates the email format using a regular expression.
-     *
-     * @param email the email string to validate
-     * @return true if the email format is valid, false otherwise
-     */
-    private boolean isValidEmail(String email) {
-        if (email == null || email.isEmpty()) {
-            return false;
-        }
-        // Email regex: username@domain.tld
-        String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
-        return email.matches(emailRegex);
-    }
-
-    /**
-     * Handles the registration process: validates input, creates a new user,
-     * saves to file, logs the action, and opens the login frame.
-     */
     private void register() {
         String email = emailField.getText().trim();
         String password = new String(passwordField.getPassword());
-        String confirmPassword = new String(confirmPasswordField.getPassword());
         String name = nameField.getText().trim();
         String role = (String) roleCombo.getSelectedItem();
 
-        // Check for empty fields
-        if (email.isEmpty() || password.isEmpty() || name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill in all fields", "Warning", JOptionPane.WARNING_MESSAGE);
+        if (!emailValid || !passwordValid || !confirmValid || !nameValid) {
+            UIHelper.showWarningDialog(this, "Please correct the errors before registering.", "Invalid Input");
             return;
         }
 
-        // Validate email format
-        if (!isValidEmail(email)) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid email address (e.g., name@domain.com)", "Invalid Email", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Check if passwords match
-        if (!password.equals(confirmPassword)) {
-            JOptionPane.showMessageDialog(this, "Passwords do not match", "Warning", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Validate password length
-        if (password.length() < 8) {
-            JOptionPane.showMessageDialog(this, "Password must be at least 8 characters", "Warning", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Check for duplicate email
-        for (User user : users) {
-            if (user.getEmail().equals(email)) {
-                JOptionPane.showMessageDialog(this, "Email already registered", "Warning", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-        }
-
-        // Create and add the new user
         User newUser = new User(email, password, role, name);
         users.add(newUser);
         FileUtil.saveUsers(users);
 
-        // Log the registration
         LoggerUtil.logRegistration(email, role);
         LoggerUtil.logCreate("User", email + " (" + role + ")");
 
-        JOptionPane.showMessageDialog(this, "Registration successful! Please login.", "Success", JOptionPane.INFORMATION_MESSAGE);
+        UIHelper.showInfoDialog(this, "Registration successful! Please login.", "Success");
         dispose();
         new LoginFrame();
     }
