@@ -108,7 +108,7 @@ public class RegisterFrame extends JFrame {
         // Title
         JLabel titleLabel = new JLabel("Create Account");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        titleLabel.setForeground(UIHelper.getAccentColor());
+        titleLabel.setForeground(new Color(79, 114, 139));
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         cardGbc.gridy = row++;
         cardGbc.gridx = 0;
