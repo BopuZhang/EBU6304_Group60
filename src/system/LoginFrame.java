@@ -2,6 +2,8 @@ package system;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Locale;
 
@@ -35,47 +37,45 @@ public class LoginFrame extends JFrame {
      * Creates a password field with a toggle button that shows/hides the password.
      * The toggle uses emojis: open eye for visible, closed eye for hidden.
      *
-     * @param field  the password field to be decorated
-     * @param toggle the toggle button that controls visibility
-     * @return a panel containing the password field and the toggle button
+     * @return a panel containing the styled password field and toggle button
      */
-    private JPanel createPasswordPanel(JPasswordField field, JToggleButton toggle) {
+    private JPanel createPasswordPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        field.setPreferredSize(new Dimension(250, 40));
-        field.setEchoChar('●'); // bullet character for masking
+        // Use UIHelper's styled password field
+        passwordField = UIHelper.createPasswordField();
+        passwordField.setPreferredSize(new Dimension(250, 40));
+        passwordField.setEchoChar('●');
 
-        // Use a font that supports emojis (adjust for your OS if needed)
+        passwordToggleBtn = new JToggleButton();
+
+        // Use emoji font; JVM will fallback automatically if not available
         Font emojiFont = new Font("Segoe UI Emoji", Font.PLAIN, 16);
-        toggle.setFont(emojiFont);
-        toggle.setFocusPainted(false);
-        toggle.setBorderPainted(false);
-        toggle.setContentAreaFilled(false);
-        toggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        passwordToggleBtn.setFont(emojiFont);
+        passwordToggleBtn.setFocusPainted(false);
+        passwordToggleBtn.setBorderPainted(false);
+        passwordToggleBtn.setContentAreaFilled(false);
+        passwordToggleBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Emoji states
-        final String OPEN_EYE = "👁️";      // open eye
-        final String CLOSED_EYE = "\uD83D\uDE48";  // "see-no-evil" monkey (closed eye)
+        final String OPEN_EYE = "👁️";
+        final String CLOSED_EYE = "\uD83D\uDE48";  // "see-no-evil" monkey
 
-        // Initial state: password hidden
-        toggle.setText(CLOSED_EYE);
-        toggle.setSelected(false);
+        passwordToggleBtn.setText(CLOSED_EYE);
+        passwordToggleBtn.setSelected(false);
 
-        toggle.addActionListener(e -> {
-            boolean show = toggle.isSelected();
-            if (show) {
-                toggle.setText(OPEN_EYE);   // open eye -> visible
-                field.setEchoChar((char) 0); // display plain text
+        passwordToggleBtn.addActionListener(e -> {
+            if (passwordToggleBtn.isSelected()) {
+                passwordToggleBtn.setText(OPEN_EYE);
+                passwordField.setEchoChar((char) 0);
             } else {
-                toggle.setText(CLOSED_EYE); // closed eye -> hidden
-                field.setEchoChar('●');      // mask with bullet
+                passwordToggleBtn.setText(CLOSED_EYE);
+                passwordField.setEchoChar('●');
             }
         });
 
-        panel.add(field, BorderLayout.CENTER);
-        panel.add(toggle, BorderLayout.EAST);
+        panel.add(passwordField, BorderLayout.CENTER);
+        panel.add(passwordToggleBtn, BorderLayout.EAST);
         return panel;
     }
 
@@ -96,7 +96,7 @@ public class LoginFrame extends JFrame {
 
         int y = 0;
 
-        // Logo area
+        // Logo
         JLabel logoLabel = new JLabel("📚");
         logoLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
         cardGbc.gridy = y++;
@@ -113,39 +113,39 @@ public class LoginFrame extends JFrame {
         cardGbc.gridwidth = 1;
         cardGbc.anchor = GridBagConstraints.WEST;
 
-        // Email (unchanged)
+        // Email label
         JLabel emailLabel = new JLabel("Email Address");
-        emailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        emailLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         cardGbc.gridy = y;
         cardGbc.gridx = 0;
         cardPanel.add(emailLabel, cardGbc);
 
+        // Email field
         emailField = UIHelper.createTextField();
         emailField.setPreferredSize(new Dimension(250, 40));
         cardGbc.gridx = 1;
         cardPanel.add(emailField, cardGbc);
         y++;
 
-        // Password with toggle
+        // Password label
         JLabel passwordLabel = new JLabel("Password");
-        passwordLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        passwordLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         cardGbc.gridy = y;
         cardGbc.gridx = 0;
         cardPanel.add(passwordLabel, cardGbc);
 
-        passwordField = new JPasswordField();
-        passwordToggleBtn = new JToggleButton();
-        JPanel passwordPanel = createPasswordPanel(passwordField, passwordToggleBtn);
+        // Password panel with toggle
+        JPanel passwordPanel = createPasswordPanel();
         cardGbc.gridx = 1;
         cardPanel.add(passwordPanel, cardGbc);
         y++;
 
-        // Button panel (Login & Register)
+        // Button panel
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new GridLayout(1, 2, 15, 0));
 
-        JButton loginBtn = UIHelper.createButton("Login", UIHelper.PRIMARY_COLOR);
+        JButton loginBtn = UIHelper.createPrimaryButton("Login");
         JButton registerBtn = UIHelper.createButton("Register", UIHelper.SECONDARY_COLOR);
 
         buttonPanel.add(loginBtn);
@@ -158,16 +158,32 @@ public class LoginFrame extends JFrame {
         cardPanel.add(buttonPanel, cardGbc);
         y++;
 
-        // Forgot Password button (no functionality yet)
+        // Forgot Password link
         JButton forgotPasswordBtn = new JButton("Forgot Password?");
-        forgotPasswordBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        forgotPasswordBtn.setForeground(new Color(79, 114, 139));
+        forgotPasswordBtn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        forgotPasswordBtn.setForeground(UIHelper.PRIMARY_COLOR);
         forgotPasswordBtn.setBorderPainted(false);
         forgotPasswordBtn.setContentAreaFilled(false);
+        forgotPasswordBtn.setFocusPainted(false);
         forgotPasswordBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Hover underline effect
+        forgotPasswordBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                forgotPasswordBtn.setText("<html><u>Forgot Password?</u></html>");
+                forgotPasswordBtn.setForeground(UIHelper.PRIMARY_COLOR.darker());
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                forgotPasswordBtn.setText("Forgot Password?");
+                forgotPasswordBtn.setForeground(UIHelper.PRIMARY_COLOR);
+            }
+        });
+
         forgotPasswordBtn.addActionListener(e -> {
-            // TODO: Implement forgot password functionality later
-            JOptionPane.showMessageDialog(this, "Feature coming soon!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            UIHelper.showInfoDialog(this, "Feature coming soon!", "Info");
         });
 
         cardGbc.gridy = y;
@@ -178,7 +194,7 @@ public class LoginFrame extends JFrame {
         cardPanel.add(forgotPasswordBtn, cardGbc);
         y++;
 
-        // Login event (unchanged)
+        // Events
         loginBtn.addActionListener(e -> login());
         registerBtn.addActionListener(e -> {
             dispose();
@@ -198,29 +214,24 @@ public class LoginFrame extends JFrame {
         String password = new String(passwordField.getPassword());
 
         if (email.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter email and password", "Warning", JOptionPane.WARNING_MESSAGE);
+            UIHelper.showWarningDialog(this, "Please enter email and password", "Warning");
             return;
         }
 
         for (User user : users) {
             if (user.getEmail().equals(email) && user.getPassword().equals(password)) {
-                JOptionPane.showMessageDialog(this, "Login successful! Welcome " + user.getName(), "Success", JOptionPane.INFORMATION_MESSAGE);
+                UIHelper.showInfoDialog(this, "Login successful! Welcome " + user.getName(), "Success");
                 dispose();
                 new DashboardFrame(user, users);
                 return;
             }
         }
         LoggerUtil.logError("Login Failed", "Invalid credentials for email: " + email);
-        JOptionPane.showMessageDialog(this, "Invalid email or password", "Login Failed", JOptionPane.ERROR_MESSAGE);
+        UIHelper.showErrorDialog(this, "Invalid email or password", "Login Failed");
     }
 
     public static void main(String[] args) {
         Locale.setDefault(Locale.ENGLISH);
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         new LoginFrame();
     }
 }
