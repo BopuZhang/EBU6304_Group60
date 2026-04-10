@@ -4,7 +4,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 import java.util.Locale;
-import com.formdev.flatlaf.FlatLightLaf;
 
 public class LoginFrame extends JFrame {
     private JTextField emailField;
@@ -215,32 +214,13 @@ public class LoginFrame extends JFrame {
         JOptionPane.showMessageDialog(this, "Invalid email or password", "Login Failed", JOptionPane.ERROR_MESSAGE);
     }
 
-
     public static void main(String[] args) {
         Locale.setDefault(Locale.ENGLISH);
-
-        // 使用 FlatLaf 现代主题
         try {
-            FlatLightLaf.setup();
-
-            // 自定义 UI 属性
-            UIManager.put("Button.arc", 10);           // 按钮圆角
-            UIManager.put("Component.arc", 10);        // 组件圆角
-            UIManager.put("TextComponent.arc", 10);    // 输入框圆角
-            UIManager.put("Table.showHorizontalLines", false);
-            UIManager.put("Table.showVerticalLines", false);
-            UIManager.put("Table.rowHeight", 40);      // 默认行高
-
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
-            // 如果 FlatLaf 失败，回退到系统外观
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
         }
-
         new LoginFrame();
     }
 }
