@@ -14,8 +14,15 @@ public class TAProfileViewFrame extends JFrame {
     private final User currentUser;
 
     public TAProfileViewFrame(User user) {
+        this(user, "My Profile");
+    }
+
+    /**
+     * @param windowTitle dialog title (e.g. when a Module Organiser views a TA profile)
+     */
+    public TAProfileViewFrame(User user, String windowTitle) {
         this.currentUser = user;
-        setTitle("My Profile");
+        setTitle(windowTitle != null && !windowTitle.isEmpty() ? windowTitle : "My Profile");
         setSize(650, 550);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
