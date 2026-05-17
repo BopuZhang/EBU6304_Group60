@@ -1,2 +1,2 @@
-953934380@qq.com,231225971,Computer Science,1st Year,12345678,cvs/953934380_qq_com_1774423098202.pdf,zbpzbp
-2398517799@qq.com,231226521,Software Engineering,2nd Year,12345678,cvs/2398517799_qq_com_1774871798592.pdf,gyngyn
+953934380@qq.com,231225971,Computer Science,1st Year,12345678,cvs/953934380_qq_com_1774423098202.pdf,zbpzbp,Java;OOP;SQL;Docker;c++
+2398517799@qq.com,231226521,Software Engineering,2nd Year,12345678,cvs/2398517799_qq_com_1774871798592.pdf,gyngyn,

@@ -3,21 +3,27 @@ package system.mo;
 import system.*;
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Frame for MO to edit an existing job posting.
- */
 public class MOEditJobFrame extends JFrame {
     private final User currentUser;
     private final Job job;
+
+    private JTextField skillInputField;
+    private JPanel skillTagsPanel;
+    private List<String> skills = new ArrayList<>();
 
     public MOEditJobFrame(User user, Job job) {
         this.currentUser = user;
         this.job = job;
 
+        if (job.getSkills() != null) {
+            skills = new ArrayList<>(job.getSkills());
+        }
+
         setTitle("Edit Position: " + job.getModuleCode());
-        setSize(650, 650);
+        setSize(650, 720);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);
@@ -48,7 +54,6 @@ public class MOEditJobFrame extends JFrame {
 
         int row = 0;
 
-        // Job ID (read-only)
         gbc.gridy = row; gbc.gridx = 0;
         formPanel.add(new JLabel("Job ID:"), gbc);
         JLabel jobIdLabel = new JLabel(job.getJobId());
@@ -58,7 +63,6 @@ public class MOEditJobFrame extends JFrame {
         formPanel.add(jobIdLabel, gbc);
         row++;
 
-        // Module Code (read-only)
         gbc.gridy = row; gbc.gridx = 0;
         formPanel.add(new JLabel("Module Code:"), gbc);
         JLabel moduleCodeLabel = new JLabel(job.getModuleCode());
@@ -68,7 +72,6 @@ public class MOEditJobFrame extends JFrame {
         formPanel.add(moduleCodeLabel, gbc);
         row++;
 
-        // Module Name (read-only)
         gbc.gridy = row; gbc.gridx = 0;
         formPanel.add(new JLabel("Module Name:"), gbc);
         JLabel moduleNameLabel = new JLabel(job.getModuleName());
@@ -78,7 +81,6 @@ public class MOEditJobFrame extends JFrame {
         formPanel.add(moduleNameLabel, gbc);
         row++;
 
-        // Description
         gbc.gridy = row; gbc.gridx = 0;
         formPanel.add(new JLabel("Description:"), gbc);
         JTextArea descArea = new JTextArea(job.getDescription(), 3, 25);
@@ -91,7 +93,6 @@ public class MOEditJobFrame extends JFrame {
         formPanel.add(descScroll, gbc);
         row++;
 
-        // Weekly Hours
         gbc.gridy = row; gbc.gridx = 0;
         formPanel.add(new JLabel("Weekly Hours (1-20):"), gbc);
         JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(job.getWeeklyHours(), 1, 20, 1));
@@ -101,7 +102,6 @@ public class MOEditJobFrame extends JFrame {
         formPanel.add(hoursSpinner, gbc);
         row++;
 
-        // Applicant Limit
         gbc.gridy = row; gbc.gridx = 0;
         formPanel.add(new JLabel("Applicant Limit:"), gbc);
         JPanel limitPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
@@ -115,7 +115,6 @@ public class MOEditJobFrame extends JFrame {
         formPanel.add(limitPanel, gbc);
         row++;
 
-        // Deadline
         gbc.gridy = row; gbc.gridx = 0;
         formPanel.add(new JLabel("Deadline (YYYY-MM-DD):"), gbc);
         JTextField deadlineField = UIHelper.createTextField();
@@ -125,7 +124,6 @@ public class MOEditJobFrame extends JFrame {
         formPanel.add(deadlineField, gbc);
         row++;
 
-        // Requirements
         gbc.gridy = row; gbc.gridx = 0;
         formPanel.add(new JLabel("Requirements:"), gbc);
         JTextArea reqArea = new JTextArea(job.getRequirements(), 3, 25);
@@ -138,10 +136,46 @@ public class MOEditJobFrame extends JFrame {
         formPanel.add(reqScroll, gbc);
         row++;
 
+        gbc.gridy = row; gbc.gridx = 0;
+        JLabel skillLabel = new JLabel("Required Skills:");
+        skillLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        formPanel.add(skillLabel, gbc);
+
+        JPanel skillInputPanel = new JPanel(new BorderLayout(5, 0));
+        skillInputPanel.setBackground(Color.WHITE);
+        skillInputField = new JTextField();
+        skillInputField.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        skillInputField.setPreferredSize(new Dimension(240, 35));
+        skillInputField.setToolTipText("Type a skill and press Enter or click Add");
+        JButton addSkillBtn = new JButton("Add");
+        addSkillBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        addSkillBtn.setBackground(UIHelper.PRIMARY_COLOR);
+        addSkillBtn.setForeground(Color.WHITE);
+        addSkillBtn.setFocusPainted(false);
+        addSkillBtn.setBorderPainted(false);
+        addSkillBtn.setOpaque(true);
+        addSkillBtn.setPreferredSize(new Dimension(55, 35));
+        addSkillBtn.addActionListener(e -> addSkill());
+        skillInputField.addActionListener(e -> addSkill());
+        skillInputPanel.add(skillInputField, BorderLayout.CENTER);
+        skillInputPanel.add(addSkillBtn, BorderLayout.EAST);
+        gbc.gridx = 1;
+        gbc.insets = new Insets(8, 8, 4, 8);
+        formPanel.add(skillInputPanel, gbc);
+        row++;
+
+        gbc.gridy = row; gbc.gridx = 1;
+        skillTagsPanel = new JPanel();
+        skillTagsPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        skillTagsPanel.setBackground(Color.WHITE);
+        gbc.insets = new Insets(2, 8, 8, 8);
+        formPanel.add(skillTagsPanel, gbc);
+        gbc.insets = new Insets(8, 8, 8, 8);
+        row++;
+
         card.add(formPanel);
         card.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Warning if job has applicants
         List<Application> allApps = FileUtil.loadApplications();
         long applicantCount = allApps.stream().filter(a -> a.getJobId().equals(job.getJobId())).count();
         if (applicantCount > 0) {
@@ -154,7 +188,6 @@ public class MOEditJobFrame extends JFrame {
             card.add(Box.createRigidArea(new Dimension(0, 20)));
         }
 
-        // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         buttonPanel.setBackground(Color.WHITE);
         buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -192,7 +225,6 @@ public class MOEditJobFrame extends JFrame {
             for (int i = 0; i < jobs.size(); i++) {
                 Job j = jobs.get(i);
                 if (j.getJobId().equals(job.getJobId())) {
-                    // Create a new Job object with updated fields
                     Job updatedJob = new Job(
                             j.getJobId(),
                             j.getMoEmail(),
@@ -203,7 +235,8 @@ public class MOEditJobFrame extends JFrame {
                             deadline,
                             requirements,
                             j.getStatus(),
-                            limit
+                            limit,
+                            skills
                     );
                     jobs.set(i, updatedJob);
                     break;
@@ -224,5 +257,51 @@ public class MOEditJobFrame extends JFrame {
 
         mainPanel.add(card, BorderLayout.CENTER);
         add(mainPanel);
+
+        refreshSkillTags();
+    }
+
+    private void addSkill() {
+        String skill = skillInputField.getText().trim();
+        if (skill.isEmpty()) return;
+        for (String s : skills) {
+            if (s.equalsIgnoreCase(skill)) {
+                skillInputField.setText("");
+                return;
+            }
+        }
+        skills.add(skill);
+        refreshSkillTags();
+        skillInputField.setText("");
+    }
+
+    private void removeSkill(String skill) {
+        skills.remove(skill);
+        refreshSkillTags();
+    }
+
+    private void refreshSkillTags() {
+        skillTagsPanel.removeAll();
+        for (String skill : skills) {
+            JPanel tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            tagPanel.setBackground(Color.WHITE);
+            JLabel tag = UIHelper.createSkillTag(skill);
+            JButton removeBtn = new JButton("×");
+            removeBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            removeBtn.setForeground(UIHelper.DANGER_COLOR);
+            removeBtn.setBackground(new Color(238, 236, 255));
+            removeBtn.setBorderPainted(false);
+            removeBtn.setFocusPainted(false);
+            removeBtn.setOpaque(true);
+            removeBtn.setBorder(BorderFactory.createEmptyBorder(3, 4, 3, 4));
+            removeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            String skillToRemove = skill;
+            removeBtn.addActionListener(e -> removeSkill(skillToRemove));
+            tagPanel.add(tag);
+            tagPanel.add(removeBtn);
+            skillTagsPanel.add(tagPanel);
+        }
+        skillTagsPanel.revalidate();
+        skillTagsPanel.repaint();
     }
 }

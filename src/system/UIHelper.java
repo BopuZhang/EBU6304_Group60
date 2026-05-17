@@ -9,6 +9,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.List;
 
 /**
  * UI helper class for consistent modern styling (Pure Swing, no external
@@ -503,5 +504,63 @@ public class UIHelper {
             }
         });
         return button;
+    }
+
+    public static int calculateSkillMatch(List<String> taSkills, List<String> jobSkills) {
+        if (jobSkills == null || jobSkills.isEmpty())
+            return -1;
+        if (taSkills == null || taSkills.isEmpty())
+            return 0;
+        int matched = 0;
+        for (String req : jobSkills) {
+            for (String skill : taSkills) {
+                if (skill.trim().equalsIgnoreCase(req.trim())) {
+                    matched++;
+                    break;
+                }
+            }
+        }
+        return (int) ((matched / (double) jobSkills.size()) * 100);
+    }
+
+    public static JLabel createSkillTag(String text) {
+        JLabel tag = new JLabel(text);
+        tag.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+        tag.setForeground(PRIMARY_COLOR);
+        tag.setBackground(new Color(238, 236, 255));
+        tag.setOpaque(true);
+        tag.setBorder(BorderFactory.createEmptyBorder(3, 10, 3, 10));
+        return tag;
+    }
+
+    public static JLabel createSkillTag(String text, boolean matched) {
+        JLabel tag = new JLabel(text);
+        tag.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+        if (matched) {
+            tag.setForeground(SUCCESS_COLOR);
+            tag.setBackground(new Color(232, 245, 238));
+        } else {
+            tag.setForeground(DANGER_COLOR);
+            tag.setBackground(new Color(252, 235, 235));
+        }
+        tag.setOpaque(true);
+        tag.setBorder(BorderFactory.createEmptyBorder(3, 10, 3, 10));
+        return tag;
+    }
+
+    public static JLabel createMatchLabel(int percentage) {
+        String text = percentage >= 0 ? percentage + "%" : "N/A";
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        if (percentage < 0) {
+            label.setForeground(DISABLED_COLOR);
+        } else if (percentage >= 80) {
+            label.setForeground(SUCCESS_COLOR);
+        } else if (percentage >= 50) {
+            label.setForeground(ACCENT_COLOR);
+        } else {
+            label.setForeground(DANGER_COLOR);
+        }
+        return label;
     }
 }

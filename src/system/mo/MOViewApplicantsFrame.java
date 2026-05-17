@@ -12,10 +12,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * Frame for MO to view applicants for their positions, with accept/reject
- * actions.
- */
 public class MOViewApplicantsFrame extends JFrame {
     private static final Color ROW_ALT = new Color(250, 250, 250);
     private static final Color REJECT_COLOR = UIHelper.DANGER_COLOR;
@@ -33,7 +29,7 @@ public class MOViewApplicantsFrame extends JFrame {
         loadDataFromDisk();
 
         setTitle("View Applicants");
-        setSize(1320, 640);
+        setSize(1400, 640);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);
@@ -206,11 +202,11 @@ public class MOViewApplicantsFrame extends JFrame {
 
     private JPanel createApplicantTable(List<Application> apps, Object selected) {
         boolean isAll = selected instanceof String && "All Positions".equals(selected);
-        int cols = isAll ? 10 : 9;
+        int cols = isAll ? 11 : 10;
         String[] headers = isAll
-                ? new String[] { "Apply Date", "Name", "Student ID", "Major", "Grade", "Position", "Status", "Decision",
+                ? new String[] { "Apply Date", "Name", "Student ID", "Major", "Grade", "Position", "Match", "Status", "Decision",
                         "Profile", "CV" }
-                : new String[] { "Apply Date", "Name", "Student ID", "Major", "Grade", "Status", "Decision", "Profile",
+                : new String[] { "Apply Date", "Name", "Student ID", "Major", "Grade", "Match", "Status", "Decision", "Profile",
                         "CV" };
 
         JPanel container = new JPanel();
@@ -251,6 +247,15 @@ public class MOViewApplicantsFrame extends JFrame {
             if (isAll && job != null) {
                 row.add(createCellLabel(job.getModuleCode() + " - " + job.getModuleName(), rowBg));
             }
+
+            List<String> taSkills = (profile != null) ? profile.getSkills() : null;
+            List<String> jobSkills = (job != null) ? job.getSkills() : null;
+            int matchPercent = UIHelper.calculateSkillMatch(taSkills, jobSkills);
+            JLabel matchLabel = UIHelper.createMatchLabel(matchPercent);
+            matchLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            matchLabel.setOpaque(true);
+            matchLabel.setBackground(rowBg);
+            row.add(matchLabel);
 
             JLabel statusLabel = createCellLabel(app.getStatus(), rowBg);
             switch (app.getStatus()) {
@@ -337,6 +342,12 @@ public class MOViewApplicantsFrame extends JFrame {
 
     private Job findJob(String jobId) {
         for (Job j : myJobs) {
+            if (j.getJobId().equals(jobId)) {
+                return j;
+            }
+        }
+        List<Job> all = FileUtil.loadJobs();
+        for (Job j : all) {
             if (j.getJobId().equals(jobId)) {
                 return j;
             }
