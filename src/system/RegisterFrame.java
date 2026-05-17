@@ -3,6 +3,7 @@ package system;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+
 import java.awt.*;
 import java.util.List;
 
@@ -87,7 +88,7 @@ public class RegisterFrame extends JFrame {
 
     private JLabel createErrorLabel() {
         JLabel label = new JLabel(" ");
-        label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));  // 增大错误提示字体
+        label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12)); // 增大错误提示字体
         label.setForeground(new Color(220, 53, 69));
         return label;
     }
@@ -119,9 +120,20 @@ public class RegisterFrame extends JFrame {
                 updateRegisterButtonState(registerBtn);
             }
 
-            @Override public void insertUpdate(DocumentEvent e) { validate(); }
-            @Override public void removeUpdate(DocumentEvent e) { validate(); }
-            @Override public void changedUpdate(DocumentEvent e) { validate(); }
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                validate();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                validate();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                validate();
+            }
         });
     }
 
@@ -143,18 +155,43 @@ public class RegisterFrame extends JFrame {
                 updateRegisterButtonState(registerBtn);
             }
 
-            @Override public void insertUpdate(DocumentEvent e) { validate(); }
-            @Override public void removeUpdate(DocumentEvent e) { validate(); }
-            @Override public void changedUpdate(DocumentEvent e) { validate(); }
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                validate();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                validate();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                validate();
+            }
         };
         passwordField.getDocument().addDocumentListener(listener);
     }
 
     private void setupConfirmPasswordValidation(JButton registerBtn) {
         DocumentListener listener = new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { validateConfirmPassword(); updateRegisterButtonState(registerBtn); }
-            @Override public void removeUpdate(DocumentEvent e) { validateConfirmPassword(); updateRegisterButtonState(registerBtn); }
-            @Override public void changedUpdate(DocumentEvent e) { validateConfirmPassword(); updateRegisterButtonState(registerBtn); }
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                validateConfirmPassword();
+                updateRegisterButtonState(registerBtn);
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                validateConfirmPassword();
+                updateRegisterButtonState(registerBtn);
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                validateConfirmPassword();
+                updateRegisterButtonState(registerBtn);
+            }
         };
         confirmPasswordField.getDocument().addDocumentListener(listener);
     }
@@ -188,14 +225,26 @@ public class RegisterFrame extends JFrame {
                 updateRegisterButtonState(registerBtn);
             }
 
-            @Override public void insertUpdate(DocumentEvent e) { validate(); }
-            @Override public void removeUpdate(DocumentEvent e) { validate(); }
-            @Override public void changedUpdate(DocumentEvent e) { validate(); }
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                validate();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                validate();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                validate();
+            }
         });
     }
 
     private boolean isValidEmail(String email) {
-        if (email == null || email.isEmpty()) return false;
+        if (email == null || email.isEmpty())
+            return false;
         String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
         return email.matches(emailRegex);
     }
@@ -219,13 +268,13 @@ public class RegisterFrame extends JFrame {
         cardGbc.gridy = row++;
         cardGbc.gridx = 0;
         cardGbc.gridwidth = 2;
-        cardGbc.insets = new Insets(15, 15, 25, 15);  // 标题下方加大间距
+        cardGbc.insets = new Insets(15, 15, 25, 15); // 标题下方加大间距
         cardPanel.add(titleLabel, cardGbc);
         cardGbc.insets = new Insets(8, 15, 8, 15);
         cardGbc.gridwidth = 1;
 
         JLabel emailLabel = new JLabel("Email Address");
-        emailLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));  // 字体增大
+        emailLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14)); // 字体增大
         cardGbc.gridy = row;
         cardGbc.gridx = 0;
         cardPanel.add(emailLabel, cardGbc);
@@ -239,7 +288,7 @@ public class RegisterFrame extends JFrame {
         emailErrorLabel = createErrorLabel();
         cardGbc.gridy = row++;
         cardGbc.gridx = 1;
-        cardGbc.insets = new Insets(0, 15, 10, 15);  // 错误标签与下一行间距
+        cardGbc.insets = new Insets(0, 15, 10, 15); // 错误标签与下一行间距
         cardPanel.add(emailErrorLabel, cardGbc);
         cardGbc.insets = new Insets(8, 15, 8, 15);
 
@@ -304,7 +353,7 @@ public class RegisterFrame extends JFrame {
         cardGbc.gridx = 0;
         cardPanel.add(roleLabel, cardGbc);
 
-        roleCombo = new JComboBox<>(new String[]{"TA", "MO", "Admin"});
+        roleCombo = new JComboBox<>(new String[] { "TA", "MO", "Admin" });
         roleCombo.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         roleCombo.setPreferredSize(new Dimension(280, 45));
         roleCombo.setBackground(Color.WHITE);
