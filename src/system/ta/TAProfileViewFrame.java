@@ -5,6 +5,7 @@ import javax.swing.*;
 import javax.swing.border.AbstractBorder;
 import java.awt.*;
 import java.io.File;
+import java.util.List;
 
 /**
  * Frame for TA to view their personal profile.
@@ -150,6 +151,33 @@ public class TAProfileViewFrame extends JFrame {
             String cvStatus = (profile.getCvPath() != null && !profile.getCvPath().isEmpty())
                     ? "Uploaded" : "Not uploaded";
             addInfoRow(content, "CV", cvStatus);
+
+            List<String> profileSkills = profile.getSkills();
+            if (profileSkills != null && !profileSkills.isEmpty()) {
+                JPanel skillsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+                skillsPanel.setBackground(Color.WHITE);
+                for (String skill : profileSkills) {
+                    skillsPanel.add(UIHelper.createSkillTag(skill));
+                }
+                GridBagConstraints gbcSkill = new GridBagConstraints();
+                gbcSkill.gridy = content.getComponentCount() / 2;
+                gbcSkill.gridx = 0;
+                gbcSkill.gridwidth = 2;
+                gbcSkill.anchor = GridBagConstraints.WEST;
+                gbcSkill.insets = new Insets(8, 5, 4, 5);
+                gbcSkill.fill = GridBagConstraints.HORIZONTAL;
+                gbcSkill.weightx = 1;
+
+                JLabel skillLabel = new JLabel("Skills:");
+                skillLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+                skillLabel.setForeground(new Color(70, 70, 80));
+
+                JPanel skillRow = new JPanel(new BorderLayout(8, 0));
+                skillRow.setBackground(Color.WHITE);
+                skillRow.add(skillLabel, BorderLayout.WEST);
+                skillRow.add(skillsPanel, BorderLayout.CENTER);
+                content.add(skillRow, gbcSkill);
+            }
         }
     }
 

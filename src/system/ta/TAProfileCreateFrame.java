@@ -5,12 +5,11 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Frame for TA to create a new personal profile with real-time validation.
- * If a profile already exists, the user is redirected to the edit frame.
- */
 public class TAProfileCreateFrame extends JFrame {
     private final User currentUser;
 
@@ -19,6 +18,9 @@ public class TAProfileCreateFrame extends JFrame {
     private JComboBox<String> gradeCombo;
     private JTextField phoneField;
     private JTextArea descArea;
+    private JTextField skillInputField;
+    private JPanel skillTagsPanel;
+    private List<String> skills = new ArrayList<>();
 
     private JLabel studentIdErrorLabel;
     private JLabel phoneErrorLabel;
@@ -31,7 +33,6 @@ public class TAProfileCreateFrame extends JFrame {
     public TAProfileCreateFrame(User user) {
         this.currentUser = user;
 
-        // Check if profile already exists
         Profile existing = FileUtil.getProfileByEmail(currentUser.getEmail());
         if (existing != null) {
             UIHelper.showInfoDialog(this,
@@ -43,7 +44,7 @@ public class TAProfileCreateFrame extends JFrame {
         }
 
         setTitle("Create Personal Profile");
-        setSize(650, 650);  // Slightly taller to accommodate error labels
+        setSize(650, 720);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);
@@ -61,19 +62,16 @@ public class TAProfileCreateFrame extends JFrame {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // Title
         JLabel title = UIHelper.createTitle("Create Personal Profile");
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(title);
         card.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Form section
         JPanel formSection = createFormSection();
         formSection.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(formSection);
         card.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setBackground(Color.WHITE);
         buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -81,7 +79,7 @@ public class TAProfileCreateFrame extends JFrame {
         saveBtn = UIHelper.createButton("Save Profile", UIHelper.SUCCESS_COLOR);
         JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
 
-        saveBtn.setEnabled(false); // Initially disabled
+        saveBtn.setEnabled(false);
         saveBtn.addActionListener(e -> saveProfile());
         cancelBtn.addActionListener(e -> dispose());
 
@@ -89,7 +87,6 @@ public class TAProfileCreateFrame extends JFrame {
         buttonPanel.add(cancelBtn);
         card.add(buttonPanel);
 
-        // Scroll pane
         JScrollPane scrollPane = UIHelper.createScrollPane(card);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -98,13 +95,9 @@ public class TAProfileCreateFrame extends JFrame {
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         add(mainPanel);
 
-        // Setup real-time validation
         setupValidation();
     }
 
-    /**
-     * Creates the form section with two-column layout and error labels.
-     */
     private JPanel createFormSection() {
         JPanel outer = new JPanel();
         outer.setLayout(new BoxLayout(outer, BoxLayout.Y_AXIS));
@@ -115,13 +108,12 @@ public class TAProfileCreateFrame extends JFrame {
         content.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 10, 0, 10);  // Reduced bottom inset to make room for error label
+        gbc.insets = new Insets(8, 10, 0, 10);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int row = 0;
 
-        // Student ID (required, 9 digits)
         gbc.gridy = row; gbc.gridx = 0;
         JLabel studentIdLabel = new JLabel("Student ID (9 digits):");
         studentIdLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -133,15 +125,13 @@ public class TAProfileCreateFrame extends JFrame {
         content.add(studentIdField, gbc);
         row++;
 
-        // Student ID error label
         studentIdErrorLabel = createErrorLabel();
         gbc.gridy = row; gbc.gridx = 1;
-        gbc.insets = new Insets(2, 10, 8, 10);  // Space below error label
+        gbc.insets = new Insets(2, 10, 8, 10);
         content.add(studentIdErrorLabel, gbc);
-        gbc.insets = new Insets(8, 10, 0, 10);  // Reset for next row
+        gbc.insets = new Insets(8, 10, 0, 10);
         row++;
 
-        // Major
         gbc.gridy = row; gbc.gridx = 0;
         JLabel majorLabel = new JLabel("Major:");
         majorLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -158,7 +148,6 @@ public class TAProfileCreateFrame extends JFrame {
         content.add(majorCombo, gbc);
         row++;
 
-        // Grade / Year
         gbc.gridy = row; gbc.gridx = 0;
         JLabel gradeLabel = new JLabel("Grade/Year:");
         gradeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -173,7 +162,6 @@ public class TAProfileCreateFrame extends JFrame {
         content.add(gradeCombo, gbc);
         row++;
 
-        // Phone
         gbc.gridy = row; gbc.gridx = 0;
         JLabel phoneLabel = new JLabel("Phone Number:");
         phoneLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -185,7 +173,6 @@ public class TAProfileCreateFrame extends JFrame {
         content.add(phoneField, gbc);
         row++;
 
-        // Phone error label
         phoneErrorLabel = createErrorLabel();
         gbc.gridy = row; gbc.gridx = 1;
         gbc.insets = new Insets(2, 10, 8, 10);
@@ -193,7 +180,6 @@ public class TAProfileCreateFrame extends JFrame {
         gbc.insets = new Insets(8, 10, 0, 10);
         row++;
 
-        // Description
         gbc.gridy = row; gbc.gridx = 0;
         JLabel descLabel = new JLabel("Personal Description:");
         descLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -208,27 +194,102 @@ public class TAProfileCreateFrame extends JFrame {
         gbc.gridx = 1;
         gbc.insets = new Insets(8, 10, 8, 10);
         content.add(descScroll, gbc);
+        row++;
+
+        gbc.gridy = row; gbc.gridx = 0;
+        JLabel skillLabel = new JLabel("Skills:");
+        skillLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        content.add(skillLabel, gbc);
+
+        JPanel skillInputPanel = new JPanel(new BorderLayout(5, 0));
+        skillInputPanel.setBackground(Color.WHITE);
+        skillInputField = new JTextField();
+        skillInputField.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        skillInputField.setPreferredSize(new Dimension(200, 35));
+        skillInputField.setToolTipText("Type a skill and press Enter or click Add");
+        JButton addSkillBtn = new JButton("Add");
+        addSkillBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        addSkillBtn.setBackground(UIHelper.PRIMARY_COLOR);
+        addSkillBtn.setForeground(Color.WHITE);
+        addSkillBtn.setFocusPainted(false);
+        addSkillBtn.setBorderPainted(false);
+        addSkillBtn.setOpaque(true);
+        addSkillBtn.setPreferredSize(new Dimension(55, 35));
+        addSkillBtn.addActionListener(e -> addSkill());
+        skillInputField.addActionListener(e -> addSkill());
+        skillInputPanel.add(skillInputField, BorderLayout.CENTER);
+        skillInputPanel.add(addSkillBtn, BorderLayout.EAST);
+        gbc.gridx = 1;
+        gbc.insets = new Insets(8, 10, 4, 10);
+        content.add(skillInputPanel, gbc);
+        row++;
+
+        gbc.gridy = row; gbc.gridx = 1;
+        skillTagsPanel = new JPanel();
+        skillTagsPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        skillTagsPanel.setBackground(Color.WHITE);
+        gbc.insets = new Insets(2, 10, 8, 10);
+        content.add(skillTagsPanel, gbc);
+        gbc.insets = new Insets(8, 10, 0, 10);
+        row++;
 
         outer.add(content);
         return outer;
     }
 
-    /**
-     * Creates a label for displaying error messages.
-     */
+    private void addSkill() {
+        String skill = skillInputField.getText().trim();
+        if (skill.isEmpty()) return;
+        for (String s : skills) {
+            if (s.equalsIgnoreCase(skill)) {
+                skillInputField.setText("");
+                return;
+            }
+        }
+        skills.add(skill);
+        refreshSkillTags();
+        skillInputField.setText("");
+    }
+
+    private void removeSkill(String skill) {
+        skills.remove(skill);
+        refreshSkillTags();
+    }
+
+    private void refreshSkillTags() {
+        skillTagsPanel.removeAll();
+        for (String skill : skills) {
+            JPanel tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            tagPanel.setBackground(Color.WHITE);
+            JLabel tag = UIHelper.createSkillTag(skill);
+            JButton removeBtn = new JButton("×");
+            removeBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            removeBtn.setForeground(UIHelper.DANGER_COLOR);
+            removeBtn.setBackground(new Color(238, 236, 255));
+            removeBtn.setBorderPainted(false);
+            removeBtn.setFocusPainted(false);
+            removeBtn.setOpaque(true);
+            removeBtn.setBorder(BorderFactory.createEmptyBorder(3, 4, 3, 4));
+            removeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            String skillToRemove = skill;
+            removeBtn.addActionListener(e -> removeSkill(skillToRemove));
+            tagPanel.add(tag);
+            tagPanel.add(removeBtn);
+            skillTagsPanel.add(tagPanel);
+        }
+        skillTagsPanel.revalidate();
+        skillTagsPanel.repaint();
+    }
+
     private JLabel createErrorLabel() {
         JLabel label = new JLabel(" ");
         label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
-        label.setForeground(new Color(220, 53, 69)); // Red
+        label.setForeground(new Color(220, 53, 69));
         label.setPreferredSize(new Dimension(250, 16));
         return label;
     }
 
-    /**
-     * Sets up real-time validation listeners.
-     */
     private void setupValidation() {
-        // Student ID validation
         studentIdField.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
                 String id = studentIdField.getText().trim();
@@ -249,7 +310,6 @@ public class TAProfileCreateFrame extends JFrame {
             @Override public void changedUpdate(DocumentEvent e) { validate(); }
         });
 
-        // Phone validation
         phoneField.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
                 String phone = phoneField.getText().trim();
@@ -257,7 +317,6 @@ public class TAProfileCreateFrame extends JFrame {
                     phoneErrorLabel.setText("Phone number is required");
                     phoneValid = false;
                 } else {
-                    // You could add more phone format validation here if needed
                     phoneErrorLabel.setText(" ");
                     phoneValid = true;
                 }
@@ -269,16 +328,10 @@ public class TAProfileCreateFrame extends JFrame {
         });
     }
 
-    /**
-     * Enables the save button only when all validations pass.
-     */
     private void updateSaveButton() {
         saveBtn.setEnabled(studentIdValid && phoneValid);
     }
 
-    /**
-     * Saves the profile after final validation.
-     */
     private void saveProfile() {
         String studentId = studentIdField.getText().trim();
         String major = (String) majorCombo.getSelectedItem();
@@ -286,7 +339,6 @@ public class TAProfileCreateFrame extends JFrame {
         String phone = phoneField.getText().trim();
         String description = descArea.getText().trim();
 
-        // Final validation (should already be valid, but just in case)
         if (studentId.isEmpty() || phone.isEmpty()) {
             UIHelper.showWarningDialog(this, "Please fill in all required fields.", "Warning");
             return;
@@ -296,7 +348,7 @@ public class TAProfileCreateFrame extends JFrame {
             return;
         }
 
-        Profile newProfile = new Profile(currentUser.getEmail(), studentId, major, grade, phone, "", description);
+        Profile newProfile = new Profile(currentUser.getEmail(), studentId, major, grade, phone, "", description, skills);
         List<Profile> profiles = FileUtil.loadProfiles();
         profiles.add(newProfile);
         FileUtil.saveProfiles(profiles);

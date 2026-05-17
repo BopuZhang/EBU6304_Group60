@@ -22,7 +22,7 @@ public class MOMyJobsFrame extends JFrame {
         this.myJobs = loadMyJobs();
 
         setTitle("My Posted Positions");
-        setSize(1400, 600);
+        setSize(1600, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);
@@ -83,34 +83,39 @@ public class MOMyJobsFrame extends JFrame {
         List<Application> allApps = FileUtil.loadApplications();
 
         String[] columns = { "Job ID", "Module Code", "Module Name", "Weekly Hours",
-                "Deadline", "Applicants", "Status", "Actions" };
+                "Deadline", "Skills", "Applicants", "Status", "Actions" };
 
-        Object[][] data = new Object[myJobs.size()][8];
+        Object[][] data = new Object[myJobs.size()][9];
         for (int i = 0; i < myJobs.size(); i++) {
             Job job = myJobs.get(i);
             int acceptedCount = countAccepted(allApps, job.getJobId());
             String applicants = acceptedCount + " / " + job.getApplicantLimit();
             String status = "OPEN".equals(job.getStatus()) ? "Open" : "Closed";
+            String skillsStr = "";
+            if (job.getSkills() != null && !job.getSkills().isEmpty()) {
+                skillsStr = String.join(", ", job.getSkills());
+            }
 
             data[i][0] = job.getJobId();
             data[i][1] = job.getModuleCode();
             data[i][2] = job.getModuleName();
             data[i][3] = job.getWeeklyHours();
             data[i][4] = job.getDeadline();
-            data[i][5] = applicants;
-            data[i][6] = status;
-            data[i][7] = job; // Store Job object for actions
+            data[i][5] = skillsStr;
+            data[i][6] = applicants;
+            data[i][7] = status;
+            data[i][8] = job; // Store Job object for actions
         }
 
         tableModel = new DefaultTableModel(data, columns) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 7;
+                return column == 8;
             }
 
             @Override
             public Class<?> getColumnClass(int column) {
-                return column == 7 ? Job.class : String.class;
+                return column == 8 ? Job.class : String.class;
             }
         };
 
@@ -131,13 +136,13 @@ public class MOMyJobsFrame extends JFrame {
                 if (!isSelected) {
                     c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
                 }
-                if (column == 5) { // Applicants column
+                if (column == 6) { // Applicants column
                     String text = (String) value;
                     String[] parts = text.split(" / ");
                     int current = Integer.parseInt(parts[0]);
                     int limit = Integer.parseInt(parts[1]);
                     setForeground(current >= limit ? UIHelper.DANGER_COLOR : UIHelper.SUCCESS_COLOR);
-                } else if (column == 6) { // Status column
+                } else if (column == 7) { // Status column
                     setForeground("Open".equals(value) ? UIHelper.SUCCESS_COLOR : UIHelper.DISABLED_COLOR);
                 } else {
                     setForeground(Color.BLACK);
@@ -147,12 +152,12 @@ public class MOMyJobsFrame extends JFrame {
         });
 
         // Action column with buttons
-        TableColumn actionCol = jobTable.getColumnModel().getColumn(7);
+        TableColumn actionCol = jobTable.getColumnModel().getColumn(8);
         actionCol.setCellRenderer(new ButtonRenderer());
         actionCol.setCellEditor(new ButtonEditor(new JCheckBox(), this, allApps));
 
         // Column widths
-        int[] widths = { 100, 90, 160, 80, 90, 80, 70, 230 };
+        int[] widths = { 100, 90, 160, 80, 90, 200, 80, 70, 230 };
         for (int i = 0; i < widths.length; i++) {
             jobTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
             jobTable.getColumnModel().getColumn(i).setMinWidth(widths[i]);

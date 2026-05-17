@@ -5,12 +5,9 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Frame for TA to edit their existing personal profile.
- * Features real-time validation and pre-filled data.
- */
 public class TAProfileEditFrame extends JFrame {
     private final User currentUser;
     private final Profile profile;
@@ -20,17 +17,19 @@ public class TAProfileEditFrame extends JFrame {
     private JComboBox<String> gradeCombo;
     private JTextField phoneField;
     private JTextArea descArea;
+    private JTextField skillInputField;
+    private JPanel skillTagsPanel;
+    private List<String> skills = new ArrayList<>();
 
     private JLabel phoneErrorLabel;
     private JButton saveBtn;
 
-    private boolean phoneValid = true; // Pre-filled with existing phone
+    private boolean phoneValid = true;
 
     public TAProfileEditFrame(User user) {
         this.currentUser = user;
         this.profile = FileUtil.getProfileByEmail(user.getEmail());
 
-        // Check if profile exists
         if (profile == null) {
             UIHelper.showInfoDialog(this,
                     "No profile found. Please create one first.",
@@ -40,8 +39,12 @@ public class TAProfileEditFrame extends JFrame {
             return;
         }
 
+        if (profile.getSkills() != null) {
+            skills = new ArrayList<>(profile.getSkills());
+        }
+
         setTitle("Edit Personal Profile");
-        setSize(650, 650);
+        setSize(650, 720);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);
@@ -59,19 +62,16 @@ public class TAProfileEditFrame extends JFrame {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // Title
         JLabel title = UIHelper.createTitle("Edit Personal Profile");
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(title);
         card.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Form section
         JPanel formSection = createFormSection();
         formSection.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(formSection);
         card.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setBackground(Color.WHITE);
         buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -86,7 +86,6 @@ public class TAProfileEditFrame extends JFrame {
         buttonPanel.add(cancelBtn);
         card.add(buttonPanel);
 
-        // Scroll pane
         JScrollPane scrollPane = UIHelper.createScrollPane(card);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -95,13 +94,9 @@ public class TAProfileEditFrame extends JFrame {
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         add(mainPanel);
 
-        // Setup validation after UI is built
         setupValidation();
     }
 
-    /**
-     * Creates the form section with pre-filled data and error labels.
-     */
     private JPanel createFormSection() {
         JPanel outer = new JPanel();
         outer.setLayout(new BoxLayout(outer, BoxLayout.Y_AXIS));
@@ -118,7 +113,6 @@ public class TAProfileEditFrame extends JFrame {
 
         int row = 0;
 
-        // Student ID (read-only)
         gbc.gridy = row; gbc.gridx = 0;
         JLabel studentIdFieldLabel = new JLabel("Student ID:");
         studentIdFieldLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -132,7 +126,6 @@ public class TAProfileEditFrame extends JFrame {
         content.add(studentIdLabel, gbc);
         row++;
 
-        // Major
         gbc.gridy = row; gbc.gridx = 0;
         JLabel majorLabel = new JLabel("Major:");
         majorLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -149,7 +142,6 @@ public class TAProfileEditFrame extends JFrame {
         content.add(majorCombo, gbc);
         row++;
 
-        // Grade / Year
         gbc.gridy = row; gbc.gridx = 0;
         JLabel gradeLabel = new JLabel("Grade/Year:");
         gradeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -165,7 +157,6 @@ public class TAProfileEditFrame extends JFrame {
         content.add(gradeCombo, gbc);
         row++;
 
-        // Phone
         gbc.gridy = row; gbc.gridx = 0;
         JLabel phoneLabel = new JLabel("Phone Number:");
         phoneLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -178,7 +169,6 @@ public class TAProfileEditFrame extends JFrame {
         content.add(phoneField, gbc);
         row++;
 
-        // Phone error label
         phoneErrorLabel = createErrorLabel();
         gbc.gridy = row; gbc.gridx = 1;
         gbc.insets = new Insets(2, 10, 8, 10);
@@ -186,7 +176,6 @@ public class TAProfileEditFrame extends JFrame {
         gbc.insets = new Insets(8, 10, 0, 10);
         row++;
 
-        // Description
         gbc.gridy = row; gbc.gridx = 0;
         JLabel descLabel = new JLabel("Personal Description:");
         descLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -201,14 +190,96 @@ public class TAProfileEditFrame extends JFrame {
         gbc.gridx = 1;
         gbc.insets = new Insets(8, 10, 8, 10);
         content.add(descScroll, gbc);
+        row++;
+
+        gbc.gridy = row; gbc.gridx = 0;
+        JLabel skillLabel = new JLabel("Skills:");
+        skillLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        content.add(skillLabel, gbc);
+
+        JPanel skillInputPanel = new JPanel(new BorderLayout(5, 0));
+        skillInputPanel.setBackground(Color.WHITE);
+        skillInputField = new JTextField();
+        skillInputField.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        skillInputField.setPreferredSize(new Dimension(200, 35));
+        skillInputField.setToolTipText("Type a skill and press Enter or click Add");
+        JButton addSkillBtn = new JButton("Add");
+        addSkillBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        addSkillBtn.setBackground(UIHelper.PRIMARY_COLOR);
+        addSkillBtn.setForeground(Color.WHITE);
+        addSkillBtn.setFocusPainted(false);
+        addSkillBtn.setBorderPainted(false);
+        addSkillBtn.setOpaque(true);
+        addSkillBtn.setPreferredSize(new Dimension(55, 35));
+        addSkillBtn.addActionListener(e -> addSkill());
+        skillInputField.addActionListener(e -> addSkill());
+        skillInputPanel.add(skillInputField, BorderLayout.CENTER);
+        skillInputPanel.add(addSkillBtn, BorderLayout.EAST);
+        gbc.gridx = 1;
+        gbc.insets = new Insets(8, 10, 4, 10);
+        content.add(skillInputPanel, gbc);
+        row++;
+
+        gbc.gridy = row; gbc.gridx = 1;
+        skillTagsPanel = new JPanel();
+        skillTagsPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        skillTagsPanel.setBackground(Color.WHITE);
+        gbc.insets = new Insets(2, 10, 8, 10);
+        content.add(skillTagsPanel, gbc);
+        gbc.insets = new Insets(8, 10, 0, 10);
+        row++;
 
         outer.add(content);
+
+        refreshSkillTags();
+
         return outer;
     }
 
-    /**
-     * Creates a label for displaying error messages.
-     */
+    private void addSkill() {
+        String skill = skillInputField.getText().trim();
+        if (skill.isEmpty()) return;
+        for (String s : skills) {
+            if (s.equalsIgnoreCase(skill)) {
+                skillInputField.setText("");
+                return;
+            }
+        }
+        skills.add(skill);
+        refreshSkillTags();
+        skillInputField.setText("");
+    }
+
+    private void removeSkill(String skill) {
+        skills.remove(skill);
+        refreshSkillTags();
+    }
+
+    private void refreshSkillTags() {
+        skillTagsPanel.removeAll();
+        for (String skill : skills) {
+            JPanel tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            tagPanel.setBackground(Color.WHITE);
+            JLabel tag = UIHelper.createSkillTag(skill);
+            JButton removeBtn = new JButton("×");
+            removeBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            removeBtn.setForeground(UIHelper.DANGER_COLOR);
+            removeBtn.setBackground(new Color(238, 236, 255));
+            removeBtn.setBorderPainted(false);
+            removeBtn.setFocusPainted(false);
+            removeBtn.setOpaque(true);
+            removeBtn.setBorder(BorderFactory.createEmptyBorder(3, 4, 3, 4));
+            removeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            String skillToRemove = skill;
+            removeBtn.addActionListener(e -> removeSkill(skillToRemove));
+            tagPanel.add(tag);
+            tagPanel.add(removeBtn);
+            skillTagsPanel.add(tagPanel);
+        }
+        skillTagsPanel.revalidate();
+        skillTagsPanel.repaint();
+    }
+
     private JLabel createErrorLabel() {
         JLabel label = new JLabel(" ");
         label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
@@ -217,9 +288,6 @@ public class TAProfileEditFrame extends JFrame {
         return label;
     }
 
-    /**
-     * Sets up real-time validation for phone field.
-     */
     private void setupValidation() {
         phoneField.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
@@ -238,9 +306,6 @@ public class TAProfileEditFrame extends JFrame {
             @Override public void changedUpdate(DocumentEvent e) { validate(); }
         });
 
-        // Initial validation (should pass because field is pre-filled)
-        // Trigger validation by simulating a document change or direct call
-        // Since DocumentListener doesn't fire on setText, we call manually
         SwingUtilities.invokeLater(() -> {
             String phone = phoneField.getText().trim();
             phoneValid = !phone.isEmpty();
@@ -251,9 +316,6 @@ public class TAProfileEditFrame extends JFrame {
         });
     }
 
-    /**
-     * Saves the updated profile.
-     */
     private void saveProfile() {
         String major = (String) majorCombo.getSelectedItem();
         String grade = (String) gradeCombo.getSelectedItem();
@@ -265,7 +327,6 @@ public class TAProfileEditFrame extends JFrame {
             return;
         }
 
-        // Create updated profile (student ID and email unchanged)
         Profile updated = new Profile(
                 profile.getEmail(),
                 profile.getStudentId(),
@@ -273,7 +334,8 @@ public class TAProfileEditFrame extends JFrame {
                 grade,
                 phone,
                 profile.getCvPath(),
-                description
+                description,
+                skills
         );
 
         List<Profile> profiles = FileUtil.loadProfiles();

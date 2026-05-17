@@ -2,28 +2,30 @@ package system.ta;
 
 import system.*;
 import javax.swing.*;
+import javax.swing.table.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 
-/**
- * Frame for TA to view available jobs and submit applications.
- * Improved distinction between "Apply" and "Applied" buttons.
- */
 public class TAJobListFrame extends JFrame {
     private final User currentUser;
     private List<Job> jobs;
     private List<Application> applications;
-    private JPanel tableContainer;
+    private Profile taProfile;
+    private JTable jobTable;
+    private DefaultTableModel tableModel;
 
     public TAJobListFrame(User user) {
         this.currentUser = user;
         this.jobs = FileUtil.loadJobs();
         this.applications = FileUtil.loadApplications();
+        this.taProfile = FileUtil.getProfileByEmail(user.getEmail());
 
         setTitle("Available Positions");
-        setSize(950, 500);
+        setSize(1150, 550);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);
@@ -41,36 +43,27 @@ public class TAJobListFrame extends JFrame {
         card.setLayout(new BorderLayout());
         card.setBorder(BorderFactory.createEmptyBorder(20, 30, 30, 30));
 
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(Color.WHITE);
         JLabel title = UIHelper.createTitle("Available Positions");
-        title.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
-        card.add(title, BorderLayout.NORTH);
+        topPanel.add(title, BorderLayout.WEST);
 
-        tableContainer = new JPanel();
-        tableContainer.setLayout(new BoxLayout(tableContainer, BoxLayout.Y_AXIS));
-        tableContainer.setBackground(Color.WHITE);
-
-        refreshTable();
-
-        JScrollPane scrollPane = UIHelper.createScrollPane(tableContainer);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        card.add(scrollPane, BorderLayout.CENTER);
-
-        // Refresh button
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        bottomPanel.setBackground(Color.WHITE);
         JButton refreshBtn = UIHelper.createButton("Refresh", UIHelper.SECONDARY_COLOR);
         refreshBtn.addActionListener(e -> refreshTable());
-        bottomPanel.add(refreshBtn);
-        card.add(bottomPanel, BorderLayout.SOUTH);
+        topPanel.add(refreshBtn, BorderLayout.EAST);
+        card.add(topPanel, BorderLayout.NORTH);
+
+        createJobTable(card);
 
         mainPanel.add(card, BorderLayout.CENTER);
         add(mainPanel);
     }
 
-    private void refreshTable() {
-        tableContainer.removeAll();
+    private void createJobTable(JPanel card) {
+        jobs = FileUtil.loadJobs();
+        applications = FileUtil.loadApplications();
+        taProfile = FileUtil.getProfileByEmail(currentUser.getEmail());
 
-        // Filter open jobs
         List<Job> openJobs = new ArrayList<>();
         for (Job job : jobs) {
             if ("OPEN".equals(job.getStatus())) {
@@ -79,130 +72,106 @@ public class TAJobListFrame extends JFrame {
         }
         openJobs.sort(Comparator.comparing(Job::getDeadline));
 
-        // Header
-        JPanel header = new JPanel(new GridLayout(1, 7, 5, 0));
+        String[] columns = { "Module Code", "Module Name", "Hours", "Deadline", "Skills", "Match", "Applicants",
+                "Status", "Action" };
+
+        Object[][] data = new Object[openJobs.size()][9];
+        for (int i = 0; i < openJobs.size(); i++) {
+            Job job = openJobs.get(i);
+            int acceptedCount = countAcceptedApplicants(job.getJobId());
+            boolean applied = hasApplied(job.getJobId());
+            boolean full = acceptedCount >= job.getApplicantLimit();
+
+            data[i][0] = job.getModuleCode();
+            data[i][1] = job.getModuleName();
+            data[i][2] = job.getWeeklyHours();
+            data[i][3] = job.getDeadline();
+            data[i][4] = job;
+            data[i][5] = job;
+            data[i][6] = acceptedCount + " / " + job.getApplicantLimit();
+            data[i][7] = full ? "Full" : (applied ? "Applied" : "Available");
+            data[i][8] = job;
+        }
+
+        tableModel = new DefaultTableModel(data, columns) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 8;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int column) {
+                if (column == 4 || column == 5 || column == 8)
+                    return Job.class;
+                return String.class;
+            }
+        };
+
+        jobTable = new JTable(tableModel);
+        jobTable.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        jobTable.setRowHeight(50);
+        jobTable.setShowGrid(false);
+        jobTable.setIntercellSpacing(new Dimension(0, 0));
+        jobTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        jobTable.setDefaultRenderer(String.class, new TextRenderer());
+        jobTable.setDefaultRenderer(Job.class, new JobRenderer());
+
+        TableColumn actionCol = jobTable.getColumnModel().getColumn(8);
+        actionCol.setCellRenderer(new ActionRenderer());
+        actionCol.setCellEditor(new ActionEditor(new JCheckBox()));
+
+        int[] widths = { 90, 140, 55, 95, 200, 60, 75, 75, 95 };
+        for (int i = 0; i < widths.length; i++) {
+            jobTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+            jobTable.getColumnModel().getColumn(i).setMinWidth(widths[i]);
+        }
+
+        JTableHeader header = jobTable.getTableHeader();
+        header.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         header.setBackground(new Color(240, 240, 240));
-        header.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
-        header.add(createHeaderLabel("Module Code"));
-        header.add(createHeaderLabel("Module Name"));
-        header.add(createHeaderLabel("Hours/Week"));
-        header.add(createHeaderLabel("Deadline"));
-        header.add(createHeaderLabel("Applicants"));
-        header.add(createHeaderLabel("Status"));
-        header.add(createHeaderLabel("Action"));
-        tableContainer.add(header);
+        header.setForeground(UIHelper.PRIMARY_COLOR);
+        header.setPreferredSize(new Dimension(0, 40));
 
-        if (openJobs.isEmpty()) {
-            JLabel empty = new JLabel("No available positions at this time.", SwingConstants.CENTER);
-            empty.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
-            empty.setForeground(Color.GRAY);
-            empty.setAlignmentX(Component.CENTER_ALIGNMENT);
-            tableContainer.add(empty);
-        } else {
-            for (Job job : openJobs) {
-                int acceptedCount = countAcceptedApplicants(job.getJobId());
-                boolean applied = hasApplied(job.getJobId());
-                boolean full = acceptedCount >= job.getApplicantLimit();
+        JScrollPane scrollPane = new JScrollPane(jobTable);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        card.add(scrollPane, BorderLayout.CENTER);
+    }
 
-                JPanel row = new JPanel(new GridLayout(1, 7, 5, 0));
-                row.setBackground(Color.WHITE);
-                row.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
-                row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+    private void refreshTable() {
+        jobs = FileUtil.loadJobs();
+        applications = FileUtil.loadApplications();
+        taProfile = FileUtil.getProfileByEmail(currentUser.getEmail());
 
-                row.add(createCellLabel(job.getModuleCode()));
-                row.add(createCellLabel(job.getModuleName()));
-                row.add(createCellLabel(String.valueOf(job.getWeeklyHours())));
-                row.add(createCellLabel(job.getDeadline()));
+        tableModel.setRowCount(0);
 
-                JLabel appLabel = createCellLabel(acceptedCount + " / " + job.getApplicantLimit());
-                appLabel.setForeground(full ? UIHelper.DANGER_COLOR : UIHelper.SUCCESS_COLOR);
-                row.add(appLabel);
-
-                String statusText;
-                Color statusColor;
-                if (full) {
-                    statusText = "Full";
-                    statusColor = UIHelper.DANGER_COLOR;
-                } else if (applied) {
-                    statusText = "Applied";
-                    statusColor = UIHelper.SUCCESS_COLOR;
-                } else {
-                    statusText = "Available";
-                    statusColor = UIHelper.PRIMARY_COLOR;
-                }
-                JLabel statusLabel = createCellLabel(statusText);
-                statusLabel.setForeground(statusColor);
-                row.add(statusLabel);
-
-                // Action button with fixed size
-                JButton actionBtn = createActionButton(job, applied, full);
-                JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-                btnPanel.setBackground(Color.WHITE);
-                btnPanel.add(actionBtn);
-                row.add(btnPanel);
-
-                tableContainer.add(row);
+        List<Job> openJobs = new ArrayList<>();
+        for (Job job : jobs) {
+            if ("OPEN".equals(job.getStatus())) {
+                openJobs.add(job);
             }
         }
+        openJobs.sort(Comparator.comparing(Job::getDeadline));
 
-        tableContainer.revalidate();
-        tableContainer.repaint();
-    }
+        for (Job job : openJobs) {
+            int acceptedCount = countAcceptedApplicants(job.getJobId());
+            boolean applied = hasApplied(job.getJobId());
+            boolean full = acceptedCount >= job.getApplicantLimit();
 
-    private JButton createActionButton(Job job, boolean applied, boolean full) {
-        JButton btn = new JButton();
-        btn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
-        btn.setForeground(Color.WHITE);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(true);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(90, 30));
-        btn.setMaximumSize(new Dimension(90, 30));
-        btn.setMinimumSize(new Dimension(90, 30));
-        // Fix border to prevent size change on click
-        btn.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-
-        if (applied) {
-            btn.setText("✓ Applied");
-            btn.setBackground(new Color(200, 200, 200));
-            btn.setEnabled(false);
-        } else if (full) {
-            btn.setText("Full");
-            btn.setBackground(new Color(180, 180, 180));
-            btn.setEnabled(false);
-        } else {
-            btn.setText("Apply");
-            btn.setBackground(UIHelper.PRIMARY_COLOR);
-            btn.setEnabled(true);
-            // Hover effect
-            btn.addMouseListener(new java.awt.event.MouseAdapter() {
-                public void mouseEntered(java.awt.event.MouseEvent evt) {
-                    btn.setBackground(UIHelper.PRIMARY_COLOR.darker());
-                }
-                public void mouseExited(java.awt.event.MouseEvent evt) {
-                    btn.setBackground(UIHelper.PRIMARY_COLOR);
-                }
+            tableModel.addRow(new Object[] {
+                    job.getModuleCode(),
+                    job.getModuleName(),
+                    job.getWeeklyHours(),
+                    job.getDeadline(),
+                    job,
+                    job,
+                    acceptedCount + " / " + job.getApplicantLimit(),
+                    full ? "Full" : (applied ? "Applied" : "Available"),
+                    job
             });
-            btn.addActionListener(e -> submitApplication(job));
         }
-
-        return btn;
-    }
-
-    private JLabel createHeaderLabel(String text) {
-        JLabel label = new JLabel(text, SwingConstants.CENTER);
-        label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
-        label.setForeground(UIHelper.PRIMARY_COLOR);
-        return label;
-    }
-
-    private JLabel createCellLabel(String text) {
-        JLabel label = new JLabel(text, SwingConstants.CENTER);
-        label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        return label;
     }
 
     private int countAcceptedApplicants(String jobId) {
@@ -228,7 +197,8 @@ public class TAJobListFrame extends JFrame {
         int confirm = UIHelper.showConfirmDialog(this,
                 "Apply for " + job.getModuleCode() + " - " + job.getModuleName() + "?",
                 "Confirm Application", JOptionPane.YES_NO_OPTION);
-        if (confirm != JOptionPane.YES_OPTION) return;
+        if (confirm != JOptionPane.YES_OPTION)
+            return;
 
         String appId = "APP" + System.currentTimeMillis();
         String time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
@@ -240,12 +210,203 @@ public class TAJobListFrame extends JFrame {
         applications = allApps;
 
         String notificationTitle = "New Application Received";
-        String notificationContent = currentUser.getName() + " has applied for your position: " + 
+        String notificationContent = currentUser.getName() + " has applied for your position: " +
                 job.getModuleCode() + " - " + job.getModuleName() + ".";
         FileUtil.sendNotification(job.getMoEmail(), notificationTitle, notificationContent, "APPLICATION");
 
         LoggerUtil.logInfo("TA " + currentUser.getEmail() + " applied for job " + job.getJobId());
         UIHelper.showInfoDialog(this, "Application submitted successfully!", "Success");
         refreshTable();
+    }
+
+    private class TextRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus,
+                int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            setHorizontalAlignment(SwingConstants.CENTER);
+            if (!isSelected) {
+                c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250));
+            }
+            setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+
+            String colName = table.getColumnName(column);
+            if ("Applicants".equals(colName)) {
+                String text = (String) value;
+                String[] parts = text.split(" / ");
+                int current = Integer.parseInt(parts[0]);
+                int limit = Integer.parseInt(parts[1]);
+                setForeground(current >= limit ? UIHelper.DANGER_COLOR : UIHelper.SUCCESS_COLOR);
+            } else if ("Status".equals(colName)) {
+                String text = (String) value;
+                if ("Full".equals(text)) {
+                    setForeground(UIHelper.DANGER_COLOR);
+                } else if ("Applied".equals(text)) {
+                    setForeground(UIHelper.SUCCESS_COLOR);
+                } else {
+                    setForeground(UIHelper.PRIMARY_COLOR);
+                }
+            } else {
+                setForeground(Color.BLACK);
+            }
+            return c;
+        }
+    }
+
+    private class JobRenderer implements TableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus,
+                int row, int column) {
+            Job job = (Job) value;
+            Color bg = !isSelected ? (row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250))
+                    : table.getSelectionBackground();
+
+            if (column == 4) {
+                JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+                panel.setBackground(bg);
+                panel.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+
+                List<String> jobSkills = job.getSkills();
+                if (jobSkills != null && !jobSkills.isEmpty()) {
+                    for (String skill : jobSkills) {
+                        JLabel tag = UIHelper.createSkillTag(skill);
+                        tag.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 10));
+                        panel.add(tag);
+                    }
+                } else {
+                    JLabel noSkill = new JLabel("-");
+                    noSkill.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+                    noSkill.setForeground(Color.GRAY);
+                    panel.add(noSkill);
+                }
+                return panel;
+            } else if (column == 5) {
+                List<String> jobSkills = job.getSkills();
+                List<String> taSkills = (taProfile != null) ? taProfile.getSkills() : null;
+                int matchPercent = UIHelper.calculateSkillMatch(taSkills, jobSkills);
+
+                JPanel panel = new JPanel(new BorderLayout());
+                panel.setBackground(bg);
+                JLabel label = UIHelper.createMatchLabel(matchPercent);
+                label.setHorizontalAlignment(SwingConstants.CENTER);
+                panel.add(label, BorderLayout.CENTER);
+                return panel;
+            }
+
+            JLabel label = new JLabel("", SwingConstants.CENTER);
+            label.setBackground(bg);
+            label.setOpaque(true);
+            return label;
+        }
+    }
+
+    private class ActionRenderer extends JPanel implements TableCellRenderer {
+        private JButton applyBtn;
+
+        public ActionRenderer() {
+            setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            setOpaque(true);
+            applyBtn = new JButton();
+            applyBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+            applyBtn.setForeground(Color.WHITE);
+            applyBtn.setFocusPainted(false);
+            applyBtn.setBorderPainted(false);
+            applyBtn.setContentAreaFilled(false);
+            applyBtn.setOpaque(true);
+            applyBtn.setPreferredSize(new Dimension(80, 30));
+            add(applyBtn);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus,
+                int row, int column) {
+            Job job = (Job) value;
+            int acceptedCount = countAcceptedApplicants(job.getJobId());
+            boolean applied = hasApplied(job.getJobId());
+            boolean full = acceptedCount >= job.getApplicantLimit();
+
+            if (applied) {
+                applyBtn.setText("Applied");
+                applyBtn.setBackground(new Color(180, 180, 180));
+            } else if (full) {
+                applyBtn.setText("Full");
+                applyBtn.setBackground(new Color(180, 180, 180));
+            } else {
+                applyBtn.setText("Apply");
+                applyBtn.setBackground(UIHelper.PRIMARY_COLOR);
+            }
+            applyBtn.setEnabled(!applied && !full);
+
+            setBackground(isSelected ? table.getSelectionBackground()
+                    : (row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250)));
+            return this;
+        }
+    }
+
+    private class ActionEditor extends AbstractCellEditor implements TableCellEditor {
+        private JPanel panel;
+        private JButton applyBtn;
+        private Job currentJob;
+
+        public ActionEditor(JCheckBox checkBox) {
+            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            panel.setOpaque(true);
+
+            applyBtn = new JButton("Apply");
+            applyBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+            applyBtn.setForeground(Color.WHITE);
+            applyBtn.setFocusPainted(false);
+            applyBtn.setBorderPainted(false);
+            applyBtn.setContentAreaFilled(false);
+            applyBtn.setOpaque(true);
+            applyBtn.setBackground(UIHelper.PRIMARY_COLOR);
+            applyBtn.setPreferredSize(new Dimension(80, 30));
+            applyBtn.addMouseListener(new MouseAdapter() {
+                public void mouseEntered(MouseEvent evt) {
+                    applyBtn.setBackground(UIHelper.PRIMARY_COLOR.darker());
+                }
+
+                public void mouseExited(MouseEvent evt) {
+                    applyBtn.setBackground(UIHelper.PRIMARY_COLOR);
+                }
+            });
+            applyBtn.addActionListener(e -> {
+                if (currentJob != null) {
+                    submitApplication(currentJob);
+                    fireEditingStopped();
+                }
+            });
+
+            panel.add(applyBtn);
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            currentJob = (Job) value;
+            int acceptedCount = countAcceptedApplicants(currentJob.getJobId());
+            boolean applied = hasApplied(currentJob.getJobId());
+            boolean full = acceptedCount >= currentJob.getApplicantLimit();
+
+            if (applied || full) {
+                applyBtn.setEnabled(false);
+                applyBtn.setBackground(new Color(180, 180, 180));
+                applyBtn.setText(applied ? "Applied" : "Full");
+            } else {
+                applyBtn.setEnabled(true);
+                applyBtn.setBackground(UIHelper.PRIMARY_COLOR);
+                applyBtn.setText("Apply");
+            }
+            panel.setBackground(table.getSelectionBackground());
+            return panel;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return currentJob;
+        }
     }
 }

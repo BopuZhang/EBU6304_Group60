@@ -5,12 +5,9 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Frame for MO to post a new job position.
- * Features real-time validation and consistent styling.
- */
 public class MOPostJobFrame extends JFrame {
     private final User currentUser;
 
@@ -21,6 +18,9 @@ public class MOPostJobFrame extends JFrame {
     private JSpinner limitSpinner;
     private JTextField deadlineField;
     private JTextArea reqArea;
+    private JTextField skillInputField;
+    private JPanel skillTagsPanel;
+    private List<String> skills = new ArrayList<>();
 
     private JLabel moduleCodeErrorLabel;
     private JLabel moduleNameErrorLabel;
@@ -38,7 +38,7 @@ public class MOPostJobFrame extends JFrame {
         this.currentUser = user;
 
         setTitle("Post New Position");
-        setSize(700, 750);
+        setSize(700, 820);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);
@@ -56,19 +56,16 @@ public class MOPostJobFrame extends JFrame {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // Title
         JLabel title = UIHelper.createTitle("Post New Position");
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(title);
         card.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Form section
         JPanel formSection = createFormSection();
         formSection.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(formSection);
         card.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setBackground(Color.WHITE);
         buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -84,7 +81,6 @@ public class MOPostJobFrame extends JFrame {
         buttonPanel.add(cancelBtn);
         card.add(buttonPanel);
 
-        // Scroll pane
         JScrollPane scrollPane = UIHelper.createScrollPane(card);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -112,7 +108,6 @@ public class MOPostJobFrame extends JFrame {
 
         int row = 0;
 
-        // Module Code
         gbc.gridy = row; gbc.gridx = 0;
         JLabel moduleCodeLabel = new JLabel("Module Code:");
         moduleCodeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -131,7 +126,6 @@ public class MOPostJobFrame extends JFrame {
         gbc.insets = new Insets(8, 10, 0, 10);
         row++;
 
-        // Module Name
         gbc.gridy = row; gbc.gridx = 0;
         JLabel moduleNameLabel = new JLabel("Module Name:");
         moduleNameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -150,7 +144,6 @@ public class MOPostJobFrame extends JFrame {
         gbc.insets = new Insets(8, 10, 0, 10);
         row++;
 
-        // Description
         gbc.gridy = row; gbc.gridx = 0;
         JLabel descLabel = new JLabel("Description:");
         descLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -173,7 +166,6 @@ public class MOPostJobFrame extends JFrame {
         gbc.insets = new Insets(8, 10, 0, 10);
         row++;
 
-        // Weekly Hours
         gbc.gridy = row; gbc.gridx = 0;
         JLabel hoursLabel = new JLabel("Weekly Hours (1-20):");
         hoursLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -186,7 +178,6 @@ public class MOPostJobFrame extends JFrame {
         content.add(hoursSpinner, gbc);
         row++;
 
-        // Applicant Limit
         gbc.gridy = row; gbc.gridx = 0;
         JLabel limitLabel = new JLabel("Applicant Limit:");
         limitLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -203,7 +194,6 @@ public class MOPostJobFrame extends JFrame {
         content.add(limitPanel, gbc);
         row++;
 
-        // Deadline
         gbc.gridy = row; gbc.gridx = 0;
         JLabel deadlineLabel = new JLabel("Deadline (YYYY-MM-DD):");
         deadlineLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -223,7 +213,6 @@ public class MOPostJobFrame extends JFrame {
         gbc.insets = new Insets(8, 10, 0, 10);
         row++;
 
-        // Requirements
         gbc.gridy = row; gbc.gridx = 0;
         JLabel reqLabel = new JLabel("Requirements:");
         reqLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -237,9 +226,91 @@ public class MOPostJobFrame extends JFrame {
         reqScroll.setPreferredSize(new Dimension(300, 70));
         gbc.gridx = 1;
         content.add(reqScroll, gbc);
+        row++;
+
+        gbc.gridy = row; gbc.gridx = 0;
+        JLabel skillLabel = new JLabel("Required Skills:");
+        skillLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        content.add(skillLabel, gbc);
+
+        JPanel skillInputPanel = new JPanel(new BorderLayout(5, 0));
+        skillInputPanel.setBackground(Color.WHITE);
+        skillInputField = new JTextField();
+        skillInputField.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        skillInputField.setPreferredSize(new Dimension(240, 35));
+        skillInputField.setToolTipText("Type a skill and press Enter or click Add");
+        JButton addSkillBtn = new JButton("Add");
+        addSkillBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        addSkillBtn.setBackground(UIHelper.PRIMARY_COLOR);
+        addSkillBtn.setForeground(Color.WHITE);
+        addSkillBtn.setFocusPainted(false);
+        addSkillBtn.setBorderPainted(false);
+        addSkillBtn.setOpaque(true);
+        addSkillBtn.setPreferredSize(new Dimension(55, 35));
+        addSkillBtn.addActionListener(e -> addSkill());
+        skillInputField.addActionListener(e -> addSkill());
+        skillInputPanel.add(skillInputField, BorderLayout.CENTER);
+        skillInputPanel.add(addSkillBtn, BorderLayout.EAST);
+        gbc.gridx = 1;
+        gbc.insets = new Insets(8, 10, 4, 10);
+        content.add(skillInputPanel, gbc);
+        row++;
+
+        gbc.gridy = row; gbc.gridx = 1;
+        skillTagsPanel = new JPanel();
+        skillTagsPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        skillTagsPanel.setBackground(Color.WHITE);
+        gbc.insets = new Insets(2, 10, 8, 10);
+        content.add(skillTagsPanel, gbc);
+        gbc.insets = new Insets(8, 10, 0, 10);
+        row++;
 
         outer.add(content);
         return outer;
+    }
+
+    private void addSkill() {
+        String skill = skillInputField.getText().trim();
+        if (skill.isEmpty()) return;
+        for (String s : skills) {
+            if (s.equalsIgnoreCase(skill)) {
+                skillInputField.setText("");
+                return;
+            }
+        }
+        skills.add(skill);
+        refreshSkillTags();
+        skillInputField.setText("");
+    }
+
+    private void removeSkill(String skill) {
+        skills.remove(skill);
+        refreshSkillTags();
+    }
+
+    private void refreshSkillTags() {
+        skillTagsPanel.removeAll();
+        for (String skill : skills) {
+            JPanel tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            tagPanel.setBackground(Color.WHITE);
+            JLabel tag = UIHelper.createSkillTag(skill);
+            JButton removeBtn = new JButton("×");
+            removeBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            removeBtn.setForeground(UIHelper.DANGER_COLOR);
+            removeBtn.setBackground(new Color(238, 236, 255));
+            removeBtn.setBorderPainted(false);
+            removeBtn.setFocusPainted(false);
+            removeBtn.setOpaque(true);
+            removeBtn.setBorder(BorderFactory.createEmptyBorder(3, 4, 3, 4));
+            removeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            String skillToRemove = skill;
+            removeBtn.addActionListener(e -> removeSkill(skillToRemove));
+            tagPanel.add(tag);
+            tagPanel.add(removeBtn);
+            skillTagsPanel.add(tagPanel);
+        }
+        skillTagsPanel.revalidate();
+        skillTagsPanel.repaint();
     }
 
     private JLabel createErrorLabel() {
@@ -251,7 +322,6 @@ public class MOPostJobFrame extends JFrame {
     }
 
     private void setupValidation() {
-        // Module Code
         moduleCodeField.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
                 String text = moduleCodeField.getText().trim();
@@ -269,7 +339,6 @@ public class MOPostJobFrame extends JFrame {
             @Override public void changedUpdate(DocumentEvent e) { validate(); }
         });
 
-        // Module Name
         moduleNameField.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
                 String text = moduleNameField.getText().trim();
@@ -287,7 +356,6 @@ public class MOPostJobFrame extends JFrame {
             @Override public void changedUpdate(DocumentEvent e) { validate(); }
         });
 
-        // Description
         descArea.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
                 String text = descArea.getText().trim();
@@ -305,7 +373,6 @@ public class MOPostJobFrame extends JFrame {
             @Override public void changedUpdate(DocumentEvent e) { validate(); }
         });
 
-        // Deadline
         deadlineField.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
                 String text = deadlineField.getText().trim();
@@ -340,7 +407,6 @@ public class MOPostJobFrame extends JFrame {
         String deadline = deadlineField.getText().trim();
         String requirements = reqArea.getText().trim();
 
-        // Final validation
         if (moduleCode.isEmpty() || moduleName.isEmpty() || description.isEmpty() || deadline.isEmpty()) {
             UIHelper.showWarningDialog(this, "Please fill in all required fields.", "Warning");
             return;
@@ -352,7 +418,7 @@ public class MOPostJobFrame extends JFrame {
 
         String jobId = "JOB" + System.currentTimeMillis();
         Job newJob = new Job(jobId, currentUser.getEmail(), moduleCode, moduleName,
-                description, hours, deadline, requirements, "OPEN", limit);
+                description, hours, deadline, requirements, "OPEN", limit, skills);
 
         List<Job> jobs = FileUtil.loadJobs();
         jobs.add(newJob);
