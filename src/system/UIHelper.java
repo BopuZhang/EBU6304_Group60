@@ -11,20 +11,23 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 /**
- * UI helper class for consistent modern styling (Pure Swing, no external libraries)
+ * UI helper class for consistent modern styling (Pure Swing, no external
+ * libraries)
  */
 public class UIHelper {
 
-    // Modern color palette (Tailwind-inspired)
-    public static final Color PRIMARY_COLOR = new Color(79, 70, 229);      // Indigo 600
-    public static final Color SECONDARY_COLOR = new Color(99, 102, 241);   // Indigo 500
-    public static final Color ACCENT_COLOR = new Color(249, 115, 22);      // Orange 500
+    // Modern color palette (Tailwind-inspired, muted & elegant)
+    public static final Color PRIMARY_COLOR = new Color(79, 70, 229); // Indigo 600
+    public static final Color SECONDARY_COLOR = new Color(99, 102, 241); // Indigo 500
+    public static final Color ACCENT_COLOR = new Color(234, 138, 56); // Warm amber
     public static final Color BACKGROUND_COLOR = new Color(249, 250, 251); // Gray 50
     public static final Color CARD_COLOR = Color.WHITE;
-    public static final Color SUCCESS_COLOR = new Color(16, 185, 129);     // Emerald 500
+    public static final Color SUCCESS_COLOR = new Color(72, 175, 130); // Muted teal-green
+    public static final Color DANGER_COLOR = new Color(210, 108, 108); // Muted soft red
+    public static final Color DISABLED_COLOR = new Color(170, 170, 180); // Soft cool gray
 
-    private static final int BORDER_RADIUS = 12;      // Uniform corner radius
-    private static final int SHADOW_OFFSET = 3;       // Shadow offset distance
+    private static final int BORDER_RADIUS = 12; // Uniform corner radius
+    private static final int SHADOW_OFFSET = 3; // Shadow offset distance
 
     // ---------- Custom rounded border for text fields ----------
     private static class RoundedBorder extends AbstractBorder {
@@ -143,7 +146,8 @@ public class UIHelper {
         return label;
     }
 
-    // ---------- Create a text field with rounded corners and focus effect ----------
+    // ---------- Create a text field with rounded corners and focus effect
+    // ----------
     public static JTextField createTextField() {
         JTextField field = new JTextField();
         field.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
@@ -165,7 +169,8 @@ public class UIHelper {
         return field;
     }
 
-    // ---------- Create a password field with rounded corners and focus effect ----------
+    // ---------- Create a password field with rounded corners and focus effect
+    // ----------
     public static JPasswordField createPasswordField() {
         JPasswordField field = new JPasswordField();
         field.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
@@ -273,7 +278,8 @@ public class UIHelper {
                 thumbColor = PRIMARY_COLOR.darker();
             }
             g2.setColor(thumbColor);
-            g2.fillRoundRect(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbBounds.height, THUMB_RADIUS, THUMB_RADIUS);
+            g2.fillRoundRect(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbBounds.height, THUMB_RADIUS,
+                    THUMB_RADIUS);
             g2.dispose();
         }
 
@@ -282,7 +288,8 @@ public class UIHelper {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setColor(trackColor);
-            g2.fillRoundRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height, TRACK_RADIUS, TRACK_RADIUS);
+            g2.fillRoundRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height, TRACK_RADIUS,
+                    TRACK_RADIUS);
             g2.dispose();
         }
 
@@ -378,6 +385,7 @@ public class UIHelper {
 
     /**
      * Show a styled confirmation dialog.
+     * 
      * @return JOptionPane.YES_OPTION or JOptionPane.NO_OPTION
      */
     public static int showConfirmDialog(Component parent, String message, String title, int optionType) {

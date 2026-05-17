@@ -136,9 +136,9 @@ public class MOMyJobsFrame extends JFrame {
                     String[] parts = text.split(" / ");
                     int current = Integer.parseInt(parts[0]);
                     int limit = Integer.parseInt(parts[1]);
-                    setForeground(current >= limit ? new Color(244, 67, 54) : UIHelper.SUCCESS_COLOR);
+                    setForeground(current >= limit ? UIHelper.DANGER_COLOR : UIHelper.SUCCESS_COLOR);
                 } else if (column == 6) { // Status column
-                    setForeground("Open".equals(value) ? UIHelper.SUCCESS_COLOR : Color.GRAY);
+                    setForeground("Open".equals(value) ? UIHelper.SUCCESS_COLOR : UIHelper.DISABLED_COLOR);
                 } else {
                     setForeground(Color.BLACK);
                 }
@@ -256,10 +256,10 @@ public class MOMyJobsFrame extends JFrame {
             styleButton(editBtn, UIHelper.PRIMARY_COLOR);
 
             deleteBtn = new JButton("Delete");
-            styleButton(deleteBtn, new Color(244, 67, 54));
+            styleButton(deleteBtn, UIHelper.DANGER_COLOR);
 
             toggleBtn = new JButton();
-            styleButton(toggleBtn, Color.GRAY);
+            styleButton(toggleBtn, UIHelper.DISABLED_COLOR);
 
             add(editBtn);
             add(deleteBtn);
@@ -284,7 +284,7 @@ public class MOMyJobsFrame extends JFrame {
                 Job job = (Job) value;
                 if ("OPEN".equals(job.getStatus())) {
                     toggleBtn.setText("Close");
-                    toggleBtn.setBackground(new Color(244, 67, 54));
+                    toggleBtn.setBackground(UIHelper.DANGER_COLOR);
                 } else {
                     toggleBtn.setText("Reopen");
                     toggleBtn.setBackground(UIHelper.SUCCESS_COLOR);
@@ -296,8 +296,6 @@ public class MOMyJobsFrame extends JFrame {
         }
     }
 
-    // Button editor for action column
-    // Button editor for action column
     class ButtonEditor extends AbstractCellEditor implements TableCellEditor {
         private JPanel panel;
         private JButton editBtn, deleteBtn, toggleBtn;
@@ -315,9 +313,9 @@ public class MOMyJobsFrame extends JFrame {
             editBtn = new JButton("Edit");
             styleButton(editBtn, UIHelper.PRIMARY_COLOR);
             deleteBtn = new JButton("Delete");
-            styleButton(deleteBtn, new Color(244, 67, 54));
+            styleButton(deleteBtn, UIHelper.DANGER_COLOR);
             toggleBtn = new JButton();
-            styleButton(toggleBtn, Color.GRAY);
+            styleButton(toggleBtn, UIHelper.DISABLED_COLOR);
 
             editBtn.addActionListener(e -> {
                 if (currentJob != null) {
@@ -362,7 +360,7 @@ public class MOMyJobsFrame extends JFrame {
             if (currentJob != null) {
                 if ("OPEN".equals(currentJob.getStatus())) {
                     toggleBtn.setText("Close");
-                    toggleBtn.setBackground(new Color(244, 67, 54));
+                    toggleBtn.setBackground(UIHelper.DANGER_COLOR);
                 } else {
                     toggleBtn.setText("Reopen");
                     toggleBtn.setBackground(UIHelper.SUCCESS_COLOR);

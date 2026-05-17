@@ -116,14 +116,14 @@ public class TAJobListFrame extends JFrame {
                 row.add(createCellLabel(job.getDeadline()));
 
                 JLabel appLabel = createCellLabel(acceptedCount + " / " + job.getApplicantLimit());
-                appLabel.setForeground(full ? new Color(244, 67, 54) : UIHelper.SUCCESS_COLOR);
+                appLabel.setForeground(full ? UIHelper.DANGER_COLOR : UIHelper.SUCCESS_COLOR);
                 row.add(appLabel);
 
                 String statusText;
                 Color statusColor;
                 if (full) {
                     statusText = "Full";
-                    statusColor = new Color(244, 67, 54);
+                    statusColor = UIHelper.DANGER_COLOR;
                 } else if (applied) {
                     statusText = "Applied";
                     statusColor = UIHelper.SUCCESS_COLOR;

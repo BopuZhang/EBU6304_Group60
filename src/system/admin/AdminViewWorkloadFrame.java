@@ -112,18 +112,18 @@ public class AdminViewWorkloadFrame extends JFrame {
             row.add(createCellLabel(email));
 
             JLabel hoursLabel = createCellLabel(hours + " hrs/week");
-            if (hours > 15) hoursLabel.setForeground(new Color(244, 67, 54));
+            if (hours > 15) hoursLabel.setForeground(UIHelper.DANGER_COLOR);
             else if (hours > 10) hoursLabel.setForeground(UIHelper.ACCENT_COLOR);
             else if (hours > 5) hoursLabel.setForeground(UIHelper.SUCCESS_COLOR);
-            else hoursLabel.setForeground(Color.GRAY);
+            else hoursLabel.setForeground(UIHelper.DISABLED_COLOR);
             row.add(hoursLabel);
 
             String statusText;
             Color statusColor;
-            if (hours > 15) { statusText = "Overloaded"; statusColor = new Color(244, 67, 54); }
+            if (hours > 15) { statusText = "Overloaded"; statusColor = UIHelper.DANGER_COLOR; }
             else if (hours > 10) { statusText = "Heavy"; statusColor = UIHelper.ACCENT_COLOR; }
             else if (hours > 0) { statusText = "Normal"; statusColor = UIHelper.SUCCESS_COLOR; }
-            else { statusText = "Idle"; statusColor = Color.GRAY; }
+            else { statusText = "Idle"; statusColor = UIHelper.DISABLED_COLOR; }
 
             JLabel statusLabel = createCellLabel(statusText);
             statusLabel.setForeground(statusColor);

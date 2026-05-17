@@ -13,11 +13,12 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Frame for MO to view applicants for their positions, with accept/reject actions.
+ * Frame for MO to view applicants for their positions, with accept/reject
+ * actions.
  */
 public class MOViewApplicantsFrame extends JFrame {
     private static final Color ROW_ALT = new Color(250, 250, 250);
-    private static final Color REJECT_COLOR = new Color(244, 67, 54);
+    private static final Color REJECT_COLOR = UIHelper.DANGER_COLOR;
 
     private final User currentUser;
     private List<Job> myJobs;
@@ -115,7 +116,7 @@ public class MOViewApplicantsFrame extends JFrame {
         jobCombo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                    int index, boolean isSelected, boolean cellHasFocus) {
                 if (value instanceof Job) {
                     Job job = (Job) value;
                     value = job.getModuleCode() + " - " + job.getModuleName() + " (" + job.getStatus() + ")";
@@ -206,9 +207,11 @@ public class MOViewApplicantsFrame extends JFrame {
     private JPanel createApplicantTable(List<Application> apps, Object selected) {
         boolean isAll = selected instanceof String && "All Positions".equals(selected);
         int cols = isAll ? 10 : 9;
-        String[] headers = isAll ?
-                new String[]{"Apply Date", "Name", "Student ID", "Major", "Grade", "Position", "Status", "Decision", "Profile", "CV"} :
-                new String[]{"Apply Date", "Name", "Student ID", "Major", "Grade", "Status", "Decision", "Profile", "CV"};
+        String[] headers = isAll
+                ? new String[] { "Apply Date", "Name", "Student ID", "Major", "Grade", "Position", "Status", "Decision",
+                        "Profile", "CV" }
+                : new String[] { "Apply Date", "Name", "Student ID", "Major", "Grade", "Status", "Decision", "Profile",
+                        "CV" };
 
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
@@ -275,8 +278,8 @@ public class MOViewApplicantsFrame extends JFrame {
             if (!canDecide) {
                 acceptBtn.setEnabled(false);
                 rejectBtn.setEnabled(false);
-                acceptBtn.setBackground(Color.GRAY);
-                rejectBtn.setBackground(Color.GRAY);
+                acceptBtn.setBackground(UIHelper.DISABLED_COLOR);
+                rejectBtn.setBackground(UIHelper.DISABLED_COLOR);
             } else {
                 acceptBtn.addActionListener(e -> updateStatus(app, "ACCEPTED", job));
                 rejectBtn.addActionListener(e -> confirmReject(app, job));
@@ -329,7 +332,7 @@ public class MOViewApplicantsFrame extends JFrame {
         btn.setBorderPainted(false);
         btn.setOpaque(true);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(56, 25));
+        btn.setPreferredSize(new Dimension(66, 25));
     }
 
     private Job findJob(String jobId) {
@@ -381,7 +384,7 @@ public class MOViewApplicantsFrame extends JFrame {
 
         if (job != null) {
             String notificationTitle = "Application Status Update";
-            String notificationContent = "Your application for " + job.getModuleCode() + " - " + job.getModuleName() + 
+            String notificationContent = "Your application for " + job.getModuleCode() + " - " + job.getModuleName() +
                     " has been " + newStatus + ".";
             FileUtil.sendNotification(app.getTaEmail(), notificationTitle, notificationContent, "STATUS_UPDATE");
         }

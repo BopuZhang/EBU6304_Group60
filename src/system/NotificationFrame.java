@@ -185,7 +185,7 @@ public class NotificationFrame extends JFrame {
         if (!notification.isRead()) {
             JLabel unreadBadge = new JLabel("●");
             unreadBadge.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-            unreadBadge.setForeground(new Color(220, 50, 50));
+            unreadBadge.setForeground(UIHelper.DANGER_COLOR);
             unreadBadge.setBorder(new EmptyBorder(0, 0, 0, 10));
             card.add(unreadBadge, BorderLayout.EAST);
         }
