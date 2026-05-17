@@ -1,0 +1,4 @@
+NOT1774419500000,953934380@qq.com,Welcome to TA Recruitment System,Welcome! You can now browse available positions and submit applications.,SYSTEM,2026-03-25 14:18:20,true
+NOT1774419600000,2398517799@qq.com,Welcome to TA Recruitment System,Welcome! You can now browse available positions and submit applications.,SYSTEM,2026-03-25 14:20:00,false
+NOT1779024397514,953934381@qq.com,New Application Received,Bopu Zhang has applied for your position: EBU6202 - Go.,APPLICATION,2026-05-17 21:26:37,true
+NOT1779024524360,953934380@qq.com,Application Status Update,Your application for EBU6202 - Go has been ACCEPTED.,STATUS_UPDATE,2026-05-17 21:28:44,true

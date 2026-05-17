@@ -379,6 +379,13 @@ public class MOViewApplicantsFrame extends JFrame {
         }
         FileUtil.saveApplications(apps);
 
+        if (job != null) {
+            String notificationTitle = "Application Status Update";
+            String notificationContent = "Your application for " + job.getModuleCode() + " - " + job.getModuleName() + 
+                    " has been " + newStatus + ".";
+            FileUtil.sendNotification(app.getTaEmail(), notificationTitle, notificationContent, "STATUS_UPDATE");
+        }
+
         boolean closedByLimit = false;
         if ("ACCEPTED".equals(newStatus) && job != null) {
             int accepted = countAccepted(apps, job.getJobId());

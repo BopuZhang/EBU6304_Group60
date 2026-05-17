@@ -86,6 +86,35 @@ public class DashboardFrame extends JFrame {
         JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         userPanel.setOpaque(false);
 
+        int unreadCount = FileUtil.getUnreadNotificationCount(currentUser.getEmail());
+        JButton notificationBtn = new JButton("📬");
+        notificationBtn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
+        notificationBtn.setBackground(Color.WHITE);
+        notificationBtn.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        notificationBtn.setFocusPainted(false);
+        notificationBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        notificationBtn.setToolTipText("Notifications" + (unreadCount > 0 ? " (" + unreadCount + " unread)" : ""));
+        notificationBtn.addActionListener(e -> new NotificationFrame(currentUser));
+        notificationBtn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                notificationBtn.setBackground(new Color(245, 245, 245));
+            }
+            public void mouseExited(MouseEvent e) {
+                notificationBtn.setBackground(Color.WHITE);
+            }
+        });
+        userPanel.add(notificationBtn);
+
+        if (unreadCount > 0) {
+            JLabel badgeLabel = new JLabel(String.valueOf(unreadCount));
+            badgeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+            badgeLabel.setForeground(Color.WHITE);
+            badgeLabel.setBackground(new Color(220, 50, 50));
+            badgeLabel.setOpaque(true);
+            badgeLabel.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+            userPanel.add(badgeLabel);
+        }
+
         JLabel userIcon = new JLabel("👤");
         userIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
 

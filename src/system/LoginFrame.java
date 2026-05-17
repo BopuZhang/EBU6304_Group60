@@ -1,6 +1,7 @@
 package system;
 
 import javax.swing.*;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -59,7 +60,7 @@ public class LoginFrame extends JFrame {
         passwordToggleBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         final String OPEN_EYE = "👁️";
-        final String CLOSED_EYE = "\uD83D\uDE48";  // "see-no-evil" monkey
+        final String CLOSED_EYE = "\uD83D\uDE48"; // "see-no-evil" monkey
 
         passwordToggleBtn.setText(CLOSED_EYE);
         passwordToggleBtn.setSelected(false);

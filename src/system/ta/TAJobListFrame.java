@@ -239,6 +239,11 @@ public class TAJobListFrame extends JFrame {
         FileUtil.saveApplications(allApps);
         applications = allApps;
 
+        String notificationTitle = "New Application Received";
+        String notificationContent = currentUser.getName() + " has applied for your position: " + 
+                job.getModuleCode() + " - " + job.getModuleName() + ".";
+        FileUtil.sendNotification(job.getMoEmail(), notificationTitle, notificationContent, "APPLICATION");
+
         LoggerUtil.logInfo("TA " + currentUser.getEmail() + " applied for job " + job.getJobId());
         UIHelper.showInfoDialog(this, "Application submitted successfully!", "Success");
         refreshTable();

@@ -186,4 +186,92 @@ public class FileUtil {
         System.out.println("No match found");
         return null;
     }
+
+    // ========== Notification Operations ==========
+    public static List<Notification> loadNotifications() {
+        List<Notification> notifications = new ArrayList<>();
+        File file = new File(DATA_DIR + "notifications.txt");
+        if (!file.exists()) return notifications;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                Notification notification = Notification.fromString(line);
+                if (notification != null) notifications.add(notification);
+            }
+        } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to load notifications: " + e.getMessage());
+        }
+        return notifications;
+    }
+
+    public static void saveNotifications(List<Notification> notifications) {
+        try {
+            File dir = new File(DATA_DIR);
+            if (!dir.exists()) dir.mkdirs();
+
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "notifications.txt"))) {
+                for (Notification notification : notifications) {
+                    writer.write(notification.toString());
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            LoggerUtil.logError("File Operation", "Failed to save notifications: " + e.getMessage());
+        }
+    }
+
+    public static List<Notification> getNotificationsByRecipient(String email) {
+        List<Notification> allNotifications = loadNotifications();
+        List<Notification> userNotifications = new ArrayList<>();
+        for (Notification notification : allNotifications) {
+            if (notification.getRecipientEmail().equalsIgnoreCase(email)) {
+                userNotifications.add(notification);
+            }
+        }
+        return userNotifications;
+    }
+
+    public static int getUnreadNotificationCount(String email) {
+        List<Notification> notifications = getNotificationsByRecipient(email);
+        int count = 0;
+        for (Notification notification : notifications) {
+            if (!notification.isRead()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public static void sendNotification(String recipientEmail, String title, String content, String type) {
+        List<Notification> notifications = loadNotifications();
+        String notificationId = "NOT" + System.currentTimeMillis();
+        String createTime = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
+        Notification notification = new Notification(notificationId, recipientEmail, title, content, type, createTime, false);
+        notifications.add(notification);
+        saveNotifications(notifications);
+        LoggerUtil.logInfo("Notification sent to: " + recipientEmail + " - " + title);
+    }
+
+    public static void markNotificationAsRead(String notificationId) {
+        List<Notification> notifications = loadNotifications();
+        for (Notification notification : notifications) {
+            if (notification.getNotificationId().equals(notificationId)) {
+                notification.setRead(true);
+                break;
+            }
+        }
+        saveNotifications(notifications);
+    }
+
+    public static void markAllNotificationsAsRead(String email) {
+        List<Notification> notifications = loadNotifications();
+        for (Notification notification : notifications) {
+            if (notification.getRecipientEmail().equalsIgnoreCase(email)) {
+                notification.setRead(true);
+            }
+        }
+        saveNotifications(notifications);
+    }
 }
