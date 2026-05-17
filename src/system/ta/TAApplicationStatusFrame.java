@@ -83,7 +83,7 @@ public class TAApplicationStatusFrame extends JFrame {
         myApps.sort((a1, a2) -> a2.getApplyTime().compareTo(a1.getApplyTime()));
 
         // Column names
-        String[] columns = {"Apply Date", "Position", "Module Code", "Weekly Hours", "Status"};
+        String[] columns = { "Apply Date", "Position", "Module Code", "Weekly Hours", "Status" };
 
         // Prepare data
         Object[][] data = new Object[myApps.size()][5];
@@ -127,8 +127,8 @@ public class TAApplicationStatusFrame extends JFrame {
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
-                                                           boolean isSelected, boolean hasFocus,
-                                                           int row, int column) {
+                    boolean isSelected, boolean hasFocus,
+                    int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setHorizontalAlignment(SwingConstants.CENTER);
                 if (!isSelected) {
@@ -140,7 +140,7 @@ public class TAApplicationStatusFrame extends JFrame {
                     if ("ACCEPTED".equals(status)) {
                         setForeground(UIHelper.SUCCESS_COLOR);
                     } else if ("REJECTED".equals(status)) {
-                        setForeground(new Color(244, 67, 54));
+                        setForeground(UIHelper.DANGER_COLOR);
                     } else { // PENDING
                         setForeground(UIHelper.ACCENT_COLOR);
                     }
@@ -171,8 +171,8 @@ public class TAApplicationStatusFrame extends JFrame {
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
-                                                           boolean isSelected, boolean hasFocus,
-                                                           int row, int column) {
+                    boolean isSelected, boolean hasFocus,
+                    int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setHorizontalAlignment(SwingConstants.CENTER);
                 if (!isSelected) {
@@ -180,9 +180,12 @@ public class TAApplicationStatusFrame extends JFrame {
                 }
                 if (column == 4) {
                     String status = (String) value;
-                    if ("ACCEPTED".equals(status)) setForeground(UIHelper.SUCCESS_COLOR);
-                    else if ("REJECTED".equals(status)) setForeground(new Color(244, 67, 54));
-                    else setForeground(UIHelper.ACCENT_COLOR);
+                    if ("ACCEPTED".equals(status))
+                        setForeground(UIHelper.SUCCESS_COLOR);
+                    else if ("REJECTED".equals(status))
+                        setForeground(UIHelper.DANGER_COLOR);
+                    else
+                        setForeground(UIHelper.ACCENT_COLOR);
                 } else {
                     setForeground(Color.BLACK);
                 }

@@ -124,7 +124,7 @@ public class AdminViewAllJobsFrame extends JFrame {
                 row.add(createCellLabel(job.getDeadline()));
 
                 String statusText = "OPEN".equals(job.getStatus()) ? "Open" : "Closed";
-                Color statusColor = "OPEN".equals(job.getStatus()) ? UIHelper.SUCCESS_COLOR : Color.GRAY;
+                Color statusColor = "OPEN".equals(job.getStatus()) ? UIHelper.SUCCESS_COLOR : UIHelper.DISABLED_COLOR;
                 JLabel statusLabel = createCellLabel(statusText);
                 statusLabel.setForeground(statusColor);
                 row.add(statusLabel);

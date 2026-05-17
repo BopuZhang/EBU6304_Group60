@@ -99,6 +99,7 @@ public class DashboardFrame extends JFrame {
             public void mouseEntered(MouseEvent e) {
                 notificationBtn.setBackground(new Color(245, 245, 245));
             }
+
             public void mouseExited(MouseEvent e) {
                 notificationBtn.setBackground(Color.WHITE);
             }
@@ -109,7 +110,7 @@ public class DashboardFrame extends JFrame {
             JLabel badgeLabel = new JLabel(String.valueOf(unreadCount));
             badgeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
             badgeLabel.setForeground(Color.WHITE);
-            badgeLabel.setBackground(new Color(220, 50, 50));
+            badgeLabel.setBackground(UIHelper.DANGER_COLOR);
             badgeLabel.setOpaque(true);
             badgeLabel.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
             userPanel.add(badgeLabel);
@@ -123,7 +124,7 @@ public class DashboardFrame extends JFrame {
 
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        logoutBtn.setForeground(new Color(200, 70, 70));
+        logoutBtn.setForeground(UIHelper.DANGER_COLOR);
         logoutBtn.setBackground(Color.WHITE);
         logoutBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
         logoutBtn.setFocusPainted(false);
@@ -132,10 +133,11 @@ public class DashboardFrame extends JFrame {
         logoutBtn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
                 logoutBtn.setForeground(Color.WHITE);
-                logoutBtn.setBackground(new Color(200, 70, 70));
+                logoutBtn.setBackground(UIHelper.DANGER_COLOR);
             }
+
             public void mouseExited(MouseEvent e) {
-                logoutBtn.setForeground(new Color(200, 70, 70));
+                logoutBtn.setForeground(UIHelper.DANGER_COLOR);
                 logoutBtn.setBackground(Color.WHITE);
             }
         });
@@ -150,8 +152,7 @@ public class DashboardFrame extends JFrame {
         // Subtle bottom border
         topBar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)),
-                topBar.getBorder()
-        ));
+                topBar.getBorder()));
 
         return topBar;
     }
@@ -167,7 +168,8 @@ public class DashboardFrame extends JFrame {
                     e -> new TAProfileCreateFrame(currentUser));
             addCard(grid, gbc, col++, row, "✏️ Edit Profile", "Update your existing profile information",
                     e -> new TAProfileEditFrame(currentUser));
-            col = 0; row++;
+            col = 0;
+            row++;
             addCard(grid, gbc, col++, row, "📎 Upload CV", "Upload your CV in PDF format (max 5MB)",
                     e -> new TACVUploadFrame(currentUser));
             addCard(grid, gbc, col++, row, "🔍 Browse Positions", "View available TA positions and apply",
@@ -188,7 +190,8 @@ public class DashboardFrame extends JFrame {
                     e -> new AdminViewWorkloadFrame(users));
             addCard(grid, gbc, col++, row, "⚙️ Manage Workload", "Adjust TA assignments",
                     e -> new AdminManageWorkloadFrame(users));
-            col = 0; row++;
+            col = 0;
+            row++;
             addCard(grid, gbc, col++, row, "📌 All Positions", "View all job postings",
                     e -> new AdminViewAllJobsFrame());
             addCard(grid, gbc, col++, row, "📜 System Logs", "Monitor system activity logs",
@@ -206,7 +209,7 @@ public class DashboardFrame extends JFrame {
     }
 
     private void addCard(JPanel grid, GridBagConstraints gbc, int col, int row,
-                         String title, String description, java.awt.event.ActionListener action) {
+            String title, String description, java.awt.event.ActionListener action) {
         gbc.gridx = col;
         gbc.gridy = row;
 
@@ -215,8 +218,7 @@ public class DashboardFrame extends JFrame {
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(230, 230, 230), 1, true),
-                BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
+                BorderFactory.createEmptyBorder(25, 25, 25, 25)));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         // Icon (using emoji for simplicity)
@@ -247,16 +249,16 @@ public class DashboardFrame extends JFrame {
                 card.setBackground(new Color(250, 250, 250));
                 card.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(UIHelper.PRIMARY_COLOR, 1, true),
-                        BorderFactory.createEmptyBorder(25, 25, 25, 25)
-                ));
+                        BorderFactory.createEmptyBorder(25, 25, 25, 25)));
             }
+
             public void mouseExited(MouseEvent e) {
                 card.setBackground(Color.WHITE);
                 card.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(new Color(230, 230, 230), 1, true),
-                        BorderFactory.createEmptyBorder(25, 25, 25, 25)
-                ));
+                        BorderFactory.createEmptyBorder(25, 25, 25, 25)));
             }
+
             public void mouseClicked(MouseEvent e) {
                 action.actionPerformed(null);
             }
@@ -274,7 +276,8 @@ public class DashboardFrame extends JFrame {
     }
 
     private void logout() {
-        int confirm = UIHelper.showConfirmDialog(this, "Are you sure you want to logout?", "Confirm", JOptionPane.YES_NO_OPTION);
+        int confirm = UIHelper.showConfirmDialog(this, "Are you sure you want to logout?", "Confirm",
+                JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             LoggerUtil.logLogout(currentUser.getEmail(), currentUser.getRole());
             dispose();
