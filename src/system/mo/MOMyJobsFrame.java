@@ -82,8 +82,8 @@ public class MOMyJobsFrame extends JFrame {
     private void createJobTable(JPanel card) {
         List<Application> allApps = FileUtil.loadApplications();
 
-        String[] columns = {"Job ID", "Module Code", "Module Name", "Weekly Hours",
-                "Deadline", "Applicants", "Status", "Actions"};
+        String[] columns = { "Job ID", "Module Code", "Module Name", "Weekly Hours",
+                "Deadline", "Applicants", "Status", "Actions" };
 
         Object[][] data = new Object[myJobs.size()][8];
         for (int i = 0; i < myJobs.size(); i++) {
@@ -116,7 +116,7 @@ public class MOMyJobsFrame extends JFrame {
 
         jobTable = new JTable(tableModel);
         jobTable.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        jobTable.setRowHeight(80);
+        jobTable.setRowHeight(45);
         jobTable.setShowGrid(false);
         jobTable.setIntercellSpacing(new Dimension(0, 0));
 
@@ -124,8 +124,8 @@ public class MOMyJobsFrame extends JFrame {
         jobTable.setDefaultRenderer(String.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
-                                                           boolean isSelected, boolean hasFocus,
-                                                           int row, int column) {
+                    boolean isSelected, boolean hasFocus,
+                    int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setHorizontalAlignment(SwingConstants.CENTER);
                 if (!isSelected) {
@@ -150,6 +150,13 @@ public class MOMyJobsFrame extends JFrame {
         TableColumn actionCol = jobTable.getColumnModel().getColumn(7);
         actionCol.setCellRenderer(new ButtonRenderer());
         actionCol.setCellEditor(new ButtonEditor(new JCheckBox(), this, allApps));
+
+        // Column widths
+        int[] widths = { 100, 90, 160, 80, 90, 80, 70, 230 };
+        for (int i = 0; i < widths.length; i++) {
+            jobTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+            jobTable.getColumnModel().getColumn(i).setMinWidth(widths[i]);
+        }
 
         // Header style
         JTableHeader header = jobTable.getTableHeader();
@@ -184,13 +191,16 @@ public class MOMyJobsFrame extends JFrame {
         List<Application> apps = FileUtil.loadApplications();
         int appCount = 0;
         for (Application app : apps) {
-            if (app.getJobId().equals(job.getJobId())) appCount++;
+            if (app.getJobId().equals(job.getJobId()))
+                appCount++;
         }
-        String msg = appCount > 0 ?
-                "This position has " + appCount + " applicant(s). Deleting will remove all associated applications.\nContinue?" :
-                "Delete this position?";
+        String msg = appCount > 0
+                ? "This position has " + appCount
+                        + " applicant(s). Deleting will remove all associated applications.\nContinue?"
+                : "Delete this position?";
         int confirm = UIHelper.showConfirmDialog(this, msg, "Confirm Delete", JOptionPane.YES_NO_OPTION);
-        if (confirm != JOptionPane.YES_OPTION) return;
+        if (confirm != JOptionPane.YES_OPTION)
+            return;
 
         List<Job> allJobs = FileUtil.loadJobs();
         allJobs.removeIf(j -> j.getJobId().equals(job.getJobId()));
@@ -218,7 +228,8 @@ public class MOMyJobsFrame extends JFrame {
         int confirm = UIHelper.showConfirmDialog(this,
                 (newStatus.equals("CLOSED") ? "Close" : "Reopen") + " this position?",
                 "Confirm", JOptionPane.YES_NO_OPTION);
-        if (confirm != JOptionPane.YES_OPTION) return;
+        if (confirm != JOptionPane.YES_OPTION)
+            return;
 
         List<Job> allJobs = FileUtil.loadJobs();
         for (Job j : allJobs) {
@@ -238,14 +249,14 @@ public class MOMyJobsFrame extends JFrame {
         private JButton editBtn, deleteBtn, toggleBtn;
 
         public ButtonRenderer() {
-            setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+            setLayout(new FlowLayout(FlowLayout.CENTER, 4, 2));
             setOpaque(true);
 
             editBtn = new JButton("Edit");
-            styleButton(editBtn, UIHelper.PRIMARY_COLOR);   // Blue
+            styleButton(editBtn, UIHelper.PRIMARY_COLOR);
 
             deleteBtn = new JButton("Delete");
-            styleButton(deleteBtn, new Color(244, 67, 54)); // Red
+            styleButton(deleteBtn, new Color(244, 67, 54));
 
             toggleBtn = new JButton();
             styleButton(toggleBtn, Color.GRAY);
@@ -262,13 +273,13 @@ public class MOMyJobsFrame extends JFrame {
             btn.setFocusPainted(false);
             btn.setBorderPainted(false);
             btn.setOpaque(true);
-            btn.setPreferredSize(new Dimension(65, 30));  // Wider to fit text
+            btn.setPreferredSize(new Dimension(60, 28));
         }
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
-                                                       boolean isSelected, boolean hasFocus,
-                                                       int row, int column) {
+                boolean isSelected, boolean hasFocus,
+                int row, int column) {
             if (value instanceof Job) {
                 Job job = (Job) value;
                 if ("OPEN".equals(job.getStatus())) {
@@ -279,8 +290,8 @@ public class MOMyJobsFrame extends JFrame {
                     toggleBtn.setBackground(UIHelper.SUCCESS_COLOR);
                 }
             }
-            setBackground(isSelected ? table.getSelectionBackground() :
-                    (row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250)));
+            setBackground(isSelected ? table.getSelectionBackground()
+                    : (row % 2 == 0 ? Color.WHITE : new Color(250, 250, 250)));
             return this;
         }
     }
@@ -298,13 +309,13 @@ public class MOMyJobsFrame extends JFrame {
             this.frame = frame;
             this.allApps = allApps;
 
-            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 2));
             panel.setOpaque(true);
 
             editBtn = new JButton("Edit");
-            styleButton(editBtn, UIHelper.PRIMARY_COLOR);   // Blue
+            styleButton(editBtn, UIHelper.PRIMARY_COLOR);
             deleteBtn = new JButton("Delete");
-            styleButton(deleteBtn, new Color(244, 67, 54)); // Red
+            styleButton(deleteBtn, new Color(244, 67, 54));
             toggleBtn = new JButton();
             styleButton(toggleBtn, Color.GRAY);
 
@@ -341,12 +352,12 @@ public class MOMyJobsFrame extends JFrame {
             btn.setFocusPainted(false);
             btn.setBorderPainted(false);
             btn.setOpaque(true);
-            btn.setPreferredSize(new Dimension(65, 30));  // Wider to fit text
+            btn.setPreferredSize(new Dimension(60, 28));
         }
 
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value,
-                                                     boolean isSelected, int row, int column) {
+                boolean isSelected, int row, int column) {
             currentJob = (Job) value;
             if (currentJob != null) {
                 if ("OPEN".equals(currentJob.getStatus())) {
