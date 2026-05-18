@@ -8,15 +8,35 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Frame for MO to view, edit, delete, and toggle status of their posted jobs.
- * Features a fixed-header table with action buttons.
+ * Frame for Module Organizers to view and manage their posted job positions.
+ * <p>
+ * This frame displays a table of all jobs posted by the current MO with
+ * options to edit, delete, and toggle job status.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
  */
 public class MOMyJobsFrame extends JFrame {
+
+    /** The currently logged-in user (Module Organizer) */
     private final User currentUser;
+
+    /** List of jobs posted by this MO */
     private List<Job> myJobs;
+
+    /** Table displaying the jobs */
     private JTable jobTable;
+
+    /** Table model for the jobs table */
     private DefaultTableModel tableModel;
 
+    /**
+     * Constructs the frame to view and manage posted jobs.
+     *
+     * @param user the logged-in Module Organizer
+     */
     public MOMyJobsFrame(User user) {
         this.currentUser = user;
         this.myJobs = loadMyJobs();

@@ -9,12 +9,36 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * The notification center frame for viewing and managing notifications.
+ * <p>
+ * This frame displays all notifications for the current user, allowing them
+ * to mark individual notifications as read or mark all as read.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class NotificationFrame extends JFrame {
+
+    /** The currently logged-in user */
     private final User currentUser;
+
+    /** Panel containing the notifications list */
     private JPanel notificationsPanel;
+
+    /** Panel containing individual notification cards */
     private JPanel listPanel;
+
+    /** List of notifications for the current user */
     private List<Notification> notifications;
 
+    /**
+     * Constructs the notification frame for the specified user.
+     *
+     * @param user the logged-in user
+     */
     public NotificationFrame(User user) {
         this.currentUser = user;
 
@@ -30,6 +54,9 @@ public class NotificationFrame extends JFrame {
         setVisible(true);
     }
 
+    /**
+     * Initializes the user interface components.
+     */
     private void initUI() {
         setLayout(new BorderLayout());
 
@@ -75,6 +102,11 @@ public class NotificationFrame extends JFrame {
         add(mainPanel, BorderLayout.CENTER);
     }
 
+    /**
+     * Creates the top navigation bar.
+     *
+     * @return the top bar panel
+     */
     private JPanel createTopBar() {
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setBackground(Color.WHITE);
@@ -102,6 +134,11 @@ public class NotificationFrame extends JFrame {
         return topBar;
     }
 
+    /**
+     * Refreshes the notifications list from storage.
+     *
+     * @param listPanel the panel to populate with notifications
+     */
     private void refreshNotifications(JPanel listPanel) {
         listPanel.removeAll();
         notifications = FileUtil.getNotificationsByRecipient(currentUser.getEmail());
@@ -142,6 +179,12 @@ public class NotificationFrame extends JFrame {
         listPanel.repaint();
     }
 
+    /**
+     * Creates a card panel for displaying a single notification.
+     *
+     * @param notification the notification to display
+     * @return the card panel
+     */
     private JPanel createNotificationCard(Notification notification) {
         JPanel card = new JPanel();
         card.setLayout(new BorderLayout());
@@ -230,6 +273,12 @@ public class NotificationFrame extends JFrame {
         }
     }
 
+    /**
+     * Formats a timestamp string to a more readable format.
+     *
+     * @param timeStr the timestamp string in "yyyy-MM-dd HH:mm:ss" format
+     * @return the formatted string in "MMM dd, HH:mm" format
+     */
     private String formatTime(String timeStr) {
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -241,6 +290,9 @@ public class NotificationFrame extends JFrame {
         }
     }
 
+    /**
+     * Marks all notifications as read for the current user.
+     */
     private void markAllAsRead() {
         FileUtil.markAllNotificationsAsRead(currentUser.getEmail());
         refreshNotifications(listPanel);

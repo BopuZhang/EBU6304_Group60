@@ -8,12 +8,39 @@ import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * The login frame for the TA Recruitment System.
+ * <p>
+ * This frame provides user authentication with email and password fields.
+ * On first run, a default admin account is created.
+ * After successful login, users are redirected to the appropriate dashboard
+ * based on their role (TA, MO, or Admin).
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2026
+ */
 public class LoginFrame extends JFrame {
+
+    /** Email input field */
     private JTextField emailField;
+
+    /** Password input field */
     private JPasswordField passwordField;
+
+    /** Toggle button to show/hide password */
     private JToggleButton passwordToggleBtn;
+
+    /** List of registered users */
     private List<User> users;
 
+    /**
+     * Constructs the login frame and initializes the UI.
+     * <p>
+     * Creates a default admin account if no users exist.
+     * </p>
+     */
     public LoginFrame() {
         setTitle("TA Recruitment System");
         setSize(600, 550);
@@ -35,8 +62,10 @@ public class LoginFrame extends JFrame {
     }
 
     /**
-     * Creates a password field with a toggle button that shows/hides the password.
-     * The toggle uses emojis: open eye for visible, closed eye for hidden.
+     * Creates a password field with a toggle button to show/hide the password.
+     * <p>
+     * The toggle uses emoji icons: open eye for visible, monkey for hidden.
+     * </p>
      *
      * @return a panel containing the styled password field and toggle button
      */
@@ -80,6 +109,9 @@ public class LoginFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Initializes the user interface components.
+     */
     private void initUI() {
         // Main panel
         JPanel mainPanel = new JPanel();
@@ -210,6 +242,13 @@ public class LoginFrame extends JFrame {
         add(mainPanel);
     }
 
+    /**
+     * Handles the login process.
+     * <p>
+     * Validates the entered credentials and redirects to the appropriate
+     * dashboard on success, or shows an error message on failure.
+     * </p>
+     */
     private void login() {
         String email = emailField.getText().trim();
         String password = new String(passwordField.getPassword());
@@ -231,6 +270,11 @@ public class LoginFrame extends JFrame {
         UIHelper.showErrorDialog(this, "Invalid email or password", "Login Failed");
     }
 
+    /**
+     * Application entry point.
+     *
+     * @param args command line arguments
+     */
     public static void main(String[] args) {
         Locale.setDefault(Locale.ENGLISH);
         new LoginFrame();

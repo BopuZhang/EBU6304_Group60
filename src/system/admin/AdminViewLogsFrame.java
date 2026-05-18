@@ -6,10 +6,21 @@ import java.awt.*;
 import java.io.*;
 
 /**
- * Frame for Admin to view system logs.
+ * Frame for administrators to view system logs.
+ * <p>
+ * This frame displays the contents of the application log file,
+ * showing all system events and user actions.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
  */
 public class AdminViewLogsFrame extends JFrame {
 
+    /**
+     * Constructs the frame to view system logs.
+     */
     public AdminViewLogsFrame() {
         setTitle("System Logs");
         setSize(800, 500);

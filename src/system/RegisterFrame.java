@@ -7,26 +7,73 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.util.List;
 
+/**
+ * The registration frame for new users.
+ * <p>
+ * This frame allows new users to create an account by providing
+ * email, password, name, and selecting a role (TA, MO, or Admin).
+ * Input validation is performed in real-time with visual feedback.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class RegisterFrame extends JFrame {
+
+    /** Email input field */
     private JTextField emailField;
+
+    /** Password input field */
     private JPasswordField passwordField;
+
+    /** Confirm password input field */
     private JPasswordField confirmPasswordField;
+
+    /** Toggle button to show/hide password */
     private JToggleButton passwordToggleBtn;
+
+    /** Toggle button to show/hide confirm password */
     private JToggleButton confirmToggleBtn;
+
+    /** Name input field */
     private JTextField nameField;
+
+    /** Role selection combo box */
     private JComboBox<String> roleCombo;
+
+    /** List of existing users */
     private List<User> users;
 
+    /** Error label for email validation */
     private JLabel emailErrorLabel;
+
+    /** Error label for password validation */
     private JLabel passwordErrorLabel;
+
+    /** Error label for confirm password validation */
     private JLabel confirmErrorLabel;
+
+    /** Error label for name validation */
     private JLabel nameErrorLabel;
 
+    /** Flag indicating if email is valid */
     private boolean emailValid = false;
+
+    /** Flag indicating if password is valid */
     private boolean passwordValid = false;
+
+    /** Flag indicating if confirm password matches */
     private boolean confirmValid = false;
+
+    /** Flag indicating if name is valid */
     private boolean nameValid = false;
 
+    /**
+     * Constructs the registration frame.
+     *
+     * @param users the list of existing users to check for duplicates
+     */
     public RegisterFrame(List<User> users) {
         this.users = users;
 
@@ -40,6 +87,12 @@ public class RegisterFrame extends JFrame {
         setVisible(true);
     }
 
+    /**
+     * Creates a password panel with a toggle button to show/hide the password.
+     *
+     * @param isConfirm true if this is the confirm password field
+     * @return a panel containing the password field and toggle button
+     */
     private JPanel createPasswordPanel(boolean isConfirm) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
@@ -93,10 +146,20 @@ public class RegisterFrame extends JFrame {
         return label;
     }
 
+    /**
+     * Updates the register button's enabled state based on validation flags.
+     *
+     * @param registerBtn the register button to update
+     */
     private void updateRegisterButtonState(JButton registerBtn) {
         registerBtn.setEnabled(emailValid && passwordValid && confirmValid && nameValid);
     }
 
+    /**
+     * Sets up real-time email validation.
+     *
+     * @param registerBtn the register button to update on validation
+     */
     private void setupEmailValidation(JButton registerBtn) {
         emailField.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
@@ -137,6 +200,11 @@ public class RegisterFrame extends JFrame {
         });
     }
 
+    /**
+     * Sets up real-time password validation.
+     *
+     * @param registerBtn the register button to update on validation
+     */
     private void setupPasswordValidation(JButton registerBtn) {
         DocumentListener listener = new DocumentListener() {
             private void validate() {
@@ -173,6 +241,11 @@ public class RegisterFrame extends JFrame {
         passwordField.getDocument().addDocumentListener(listener);
     }
 
+    /**
+     * Sets up real-time confirm password validation.
+     *
+     * @param registerBtn the register button to update on validation
+     */
     private void setupConfirmPasswordValidation(JButton registerBtn) {
         DocumentListener listener = new DocumentListener() {
             @Override
@@ -196,6 +269,9 @@ public class RegisterFrame extends JFrame {
         confirmPasswordField.getDocument().addDocumentListener(listener);
     }
 
+    /**
+     * Validates that the confirm password matches the password.
+     */
     private void validateConfirmPassword() {
         String password = new String(passwordField.getPassword());
         String confirm = new String(confirmPasswordField.getPassword());
@@ -211,6 +287,11 @@ public class RegisterFrame extends JFrame {
         }
     }
 
+    /**
+     * Sets up real-time name validation.
+     *
+     * @param registerBtn the register button to update on validation
+     */
     private void setupNameValidation(JButton registerBtn) {
         nameField.getDocument().addDocumentListener(new DocumentListener() {
             private void validate() {
@@ -242,6 +323,12 @@ public class RegisterFrame extends JFrame {
         });
     }
 
+    /**
+     * Validates the email format using a regular expression.
+     *
+     * @param email the email to validate
+     * @return true if the email is valid, false otherwise
+     */
     private boolean isValidEmail(String email) {
         if (email == null || email.isEmpty())
             return false;
@@ -249,6 +336,9 @@ public class RegisterFrame extends JFrame {
         return email.matches(emailRegex);
     }
 
+    /**
+     * Initializes the user interface components.
+     */
     private void initUI() {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(UIHelper.BACKGROUND_COLOR);
@@ -415,6 +505,12 @@ public class RegisterFrame extends JFrame {
         add(wrapper);
     }
 
+    /**
+     * Handles the registration process.
+     * <p>
+     * Creates a new user account if all validations pass.
+     * </p>
+     */
     private void register() {
         String email = emailField.getText().trim();
         String password = new String(passwordField.getPassword());

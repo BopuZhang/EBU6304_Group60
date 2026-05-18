@@ -7,13 +7,30 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Frame for Admin to view all job positions with status filter.
+ * Frame for administrators to view all job positions with status filtering.
+ * <p>
+ * This frame displays a table of all job positions in the system with
+ * options to filter by status (Open/Closed).
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
  */
 public class AdminViewAllJobsFrame extends JFrame {
+
+    /** List of all jobs in the system */
     private final List<Job> allJobs;
+
+    /** Container for the table */
     private JPanel tableContainer;
+
+    /** Status filter combo box */
     private JComboBox<String> statusFilter;
 
+    /**
+     * Constructs the frame to view all job positions.
+     */
     public AdminViewAllJobsFrame() {
         this.allJobs = FileUtil.loadJobs();
 

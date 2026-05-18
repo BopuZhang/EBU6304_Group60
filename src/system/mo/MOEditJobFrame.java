@@ -6,8 +6,23 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Frame for Module Organizers to edit an existing job position.
+ * <p>
+ * This frame allows MOs to modify job details including module information,
+ * workload hours, deadline, and required skills.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class MOEditJobFrame extends JFrame {
+
+    /** The currently logged-in user (Module Organizer) */
     private final User currentUser;
+
+    /** The job being edited */
     private final Job job;
 
     private JTextField skillInputField;

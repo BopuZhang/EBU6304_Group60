@@ -12,8 +12,23 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 
+/**
+ * Frame for Teaching Assistants to upload their CV.
+ * <p>
+ * This frame provides a drag-and-drop area for uploading CV files
+ * in PDF format with a maximum size of 5MB.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class TACVUploadFrame extends JFrame {
+
+    /** The currently logged-in user */
     private final User currentUser;
+
+    /** The TA's profile */
     private Profile profile;
 
     private static final Color WHITE_BG = Color.WHITE;

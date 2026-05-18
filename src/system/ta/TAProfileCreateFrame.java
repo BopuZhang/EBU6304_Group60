@@ -11,7 +11,20 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Frame for Teaching Assistants to create their profile for the first time.
+ * <p>
+ * This frame provides a form for TAs to enter their academic details,
+ * contact information, skills, and self-description.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class TAProfileCreateFrame extends JFrame {
+
+    /** The currently logged-in user */
     private final User currentUser;
 
     private static final Color WHITE_BG = Color.WHITE;
