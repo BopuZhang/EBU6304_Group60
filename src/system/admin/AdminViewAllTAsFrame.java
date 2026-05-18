@@ -48,7 +48,7 @@ public class AdminViewAllTAsFrame extends JFrame {
         northArea.setBackground(Color.WHITE);
 
         JLabel title = UIHelper.createTitle("All Teaching Assistants");
-        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
         northArea.add(title);
         northArea.add(Box.createRigidArea(new Dimension(0, 15)));
 
