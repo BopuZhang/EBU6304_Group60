@@ -1,6 +1,7 @@
 package system.ta;
 
 import system.*;
+import system.ui.WrapLayout;
 import javax.swing.*;
 import javax.swing.border.AbstractBorder;
 import java.awt.*;
@@ -30,7 +31,7 @@ public class TAProfileViewFrame extends JFrame {
     public TAProfileViewFrame(User user, String windowTitle) {
         this.currentUser = user;
         setTitle(windowTitle != null && !windowTitle.isEmpty() ? windowTitle : "My Profile");
-        setSize(680, 620);
+        setSize(560, 620);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(UIHelper.BACKGROUND_COLOR);
@@ -65,12 +66,11 @@ public class TAProfileViewFrame extends JFrame {
 
         JPanel accountSection = createInfoSection(
                 "\uD83D\uDCCB", "Account Information",
-                new String[][]{
-                        {"Name", currentUser.getName()},
-                        {"Email", currentUser.getEmail()},
-                        {"Role", currentUser.getRole()}
-                }
-        );
+                new String[][] {
+                        { "Name", currentUser.getName() },
+                        { "Email", currentUser.getEmail() },
+                        { "Role", currentUser.getRole() }
+                });
         accountSection.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(accountSection);
         card.add(Box.createRigidArea(new Dimension(0, 16)));
@@ -193,7 +193,8 @@ public class TAProfileViewFrame extends JFrame {
     }
 
     private String getInitials(String name) {
-        if (name == null || name.trim().isEmpty()) return "?";
+        if (name == null || name.trim().isEmpty())
+            return "?";
         String[] parts = name.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < Math.min(parts.length, 2); i++) {
@@ -371,7 +372,7 @@ public class TAProfileViewFrame extends JFrame {
                 skillLabel.setForeground(TEXT_MEDIUM);
                 skillRow.add(skillLabel, BorderLayout.WEST);
 
-                JPanel skillsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+                JPanel skillsPanel = new JPanel(new WrapLayout(FlowLayout.LEFT, 6, 4));
                 skillsPanel.setBackground(SOFT_BG);
                 for (String skill : profileSkills) {
                     skillsPanel.add(createModernSkillTag(skill));
@@ -412,7 +413,8 @@ public class TAProfileViewFrame extends JFrame {
     }
 
     private String escapeHtml(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
         return text.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
@@ -476,6 +478,7 @@ public class TAProfileViewFrame extends JFrame {
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 button.setBackground(LIGHT_ACCENT);
             }
+
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
                 button.setBackground(WHITE_BG);
