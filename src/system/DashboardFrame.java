@@ -186,8 +186,6 @@ public class DashboardFrame extends JFrame {
         } else if ("Admin".equals(role)) {
             addCard(grid, gbc, col++, row, "👨‍🎓 All TAs", "View and filter all teaching assistants",
                     e -> new AdminViewAllTAsFrame(users));
-            addCard(grid, gbc, col++, row, "📈 TA Workload", "Overview of TA workload distribution",
-                    e -> new AdminViewWorkloadFrame(users));
             addCard(grid, gbc, col++, row, "⚙️ Manage Workload", "Adjust TA assignments",
                     e -> new AdminManageWorkloadFrame(users));
             col = 0;
