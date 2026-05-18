@@ -10,13 +10,32 @@ import java.awt.event.MouseEvent;
 import java.util.List;
 
 /**
- * Modern card-based dashboard with no sidebar.
- * All functionality is accessed via beautifully designed cards.
+ * The main dashboard frame for the TA Recruitment System.
+ * <p>
+ * This frame provides role-based access to different functionalities through
+ * a modern card-based interface. Depending on the user's role (TA, MO, or
+ * Admin),
+ * different feature cards are displayed.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
  */
 public class DashboardFrame extends JFrame {
+
+    /** The currently logged-in user */
     private final User currentUser;
+
+    /** List of all users in the system */
     private final List<User> users;
 
+    /**
+     * Constructs the dashboard frame for the specified user.
+     *
+     * @param user  the logged-in user
+     * @param users the list of all users
+     */
     public DashboardFrame(User user, List<User> users) {
         this.currentUser = user;
         this.users = users;
@@ -31,6 +50,9 @@ public class DashboardFrame extends JFrame {
         setVisible(true);
     }
 
+    /**
+     * Initializes the user interface components.
+     */
     private void initUI() {
         setLayout(new BorderLayout());
 
@@ -71,6 +93,11 @@ public class DashboardFrame extends JFrame {
         add(mainPanel, BorderLayout.CENTER);
     }
 
+    /**
+     * Creates the top navigation bar with logo and user info.
+     *
+     * @return the top bar panel
+     */
     private JPanel createTopBar() {
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setBackground(Color.WHITE);
@@ -157,6 +184,12 @@ public class DashboardFrame extends JFrame {
         return topBar;
     }
 
+    /**
+     * Adds feature cards to the grid based on the user's role.
+     *
+     * @param grid the grid panel
+     * @param gbc  the grid constraints
+     */
     private void addCardsToGrid(JPanel grid, GridBagConstraints gbc) {
         String role = currentUser.getRole();
         int col = 0, row = 0;
@@ -206,6 +239,17 @@ public class DashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Adds a feature card to the grid.
+     *
+     * @param grid        the grid panel
+     * @param gbc         the grid constraints
+     * @param col         the column index
+     * @param row         the row index
+     * @param title       the card title
+     * @param description the card description
+     * @param action      the action to perform on click
+     */
     private void addCard(JPanel grid, GridBagConstraints gbc, int col, int row,
             String title, String description, java.awt.event.ActionListener action) {
         gbc.gridx = col;
@@ -265,6 +309,14 @@ public class DashboardFrame extends JFrame {
         grid.add(card, gbc);
     }
 
+    /**
+     * Adds an invisible placeholder card to balance the grid.
+     *
+     * @param grid the grid panel
+     * @param gbc  the grid constraints
+     * @param col  the column index
+     * @param row  the row index
+     */
     private void addPlaceholderCard(JPanel grid, GridBagConstraints gbc, int col, int row) {
         gbc.gridx = col;
         gbc.gridy = row;
@@ -273,6 +325,9 @@ public class DashboardFrame extends JFrame {
         grid.add(placeholder, gbc);
     }
 
+    /**
+     * Handles user logout with confirmation dialog.
+     */
     private void logout() {
         int confirm = UIHelper.showConfirmDialog(this, "Are you sure you want to logout?", "Confirm",
                 JOptionPane.YES_NO_OPTION);

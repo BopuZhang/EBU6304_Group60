@@ -11,12 +11,35 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 
+/**
+ * Frame for Teaching Assistants to browse available job positions.
+ * <p>
+ * This frame displays a table of all open TA positions with skill matching
+ * indicators. TAs can click on a job to view details and apply.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class TAJobListFrame extends JFrame {
+
+    /** The currently logged-in user */
     private final User currentUser;
+
+    /** List of all jobs */
     private List<Job> jobs;
+
+    /** List of all applications */
     private List<Application> applications;
+
+    /** The TA's profile */
     private Profile taProfile;
+
+    /** Table displaying the jobs */
     private JTable jobTable;
+
+    /** Table model for the jobs table */
     private DefaultTableModel tableModel;
 
     private static final Color WHITE_BG = Color.WHITE;

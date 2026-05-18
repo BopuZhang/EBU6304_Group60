@@ -10,7 +10,20 @@ import java.awt.geom.RoundRectangle2D;
 import java.io.File;
 import java.util.List;
 
+/**
+ * Frame for Teaching Assistants to view their profile information.
+ * <p>
+ * This frame displays the TA's personal information, academic details,
+ * skills, and CV. It can also be used by administrators to view TA profiles.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class TAProfileViewFrame extends JFrame {
+
+    /** The currently logged-in user */
     private final User currentUser;
 
     private static final Color SOFT_BG = new Color(245, 247, 250);

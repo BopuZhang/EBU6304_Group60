@@ -8,17 +8,44 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Frame for Admin to view all Teaching Assistants with filtering capabilities.
+ * Frame for administrators to view all Teaching Assistants with filtering capabilities.
+ * <p>
+ * This frame displays a table of all TAs in the system with options to filter
+ * by major and grade. Administrators can click on a TA to view their profile.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
  */
 public class AdminViewAllTAsFrame extends JFrame {
+
+    /** List of all users in the system */
     private final List<User> users;
+
+    /** List of all TA profiles */
     private final List<Profile> allProfiles;
+
+    /** Container for the table */
     private JPanel tableContainer;
+
+    /** Search input field */
     private JTextField searchField;
+
+    /** Major filter combo box */
     private JComboBox<String> majorFilter;
+
+    /** Grade filter combo box */
     private JComboBox<String> gradeFilter;
+
+    /** Label showing count of displayed TAs */
     private JLabel countLabel;
 
+    /**
+     * Constructs the frame to view all TAs.
+     *
+     * @param users the list of all users
+     */
     public AdminViewAllTAsFrame(List<User> users) {
         this.users = users;
         this.allProfiles = FileUtil.loadProfiles();

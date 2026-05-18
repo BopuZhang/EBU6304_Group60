@@ -24,3 +24,4 @@ admin@bupt.edu,admin123,Admin,系统管理员
 2398517799@qq.com,12345678,TA,Yinan Gao
 239@qq.com,12345678,TA,1223
 123@qq.com,12345678,TA,123
+134567@qq.com,12345678,TA,sam

@@ -2,31 +2,80 @@ package system.ui;
 
 import java.awt.*;
 
+/**
+ * A flow layout that wraps components to the next line when they exceed
+ * the container width.
+ * <p>
+ * This layout manager extends FlowLayout to support automatic line wrapping,
+ * making it ideal for displaying tags, buttons, or other components that
+ * should flow and wrap naturally.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class WrapLayout extends FlowLayout {
+
+    /** Cached preferred layout size */
     private Dimension preferredLayoutSize;
 
+    /**
+     * Constructs a new WrapLayout with left alignment.
+     */
     public WrapLayout() {
         super();
     }
 
+    /**
+     * Constructs a new WrapLayout with the specified alignment.
+     *
+     * @param align the alignment (LEFT, CENTER, RIGHT)
+     */
     public WrapLayout(int align) {
         super(align);
     }
 
+    /**
+     * Constructs a new WrapLayout with the specified alignment and gaps.
+     *
+     * @param align the alignment (LEFT, CENTER, RIGHT)
+     * @param hgap  the horizontal gap between components
+     * @param vgap  the vertical gap between rows
+     */
     public WrapLayout(int align, int hgap, int vgap) {
         super(align, hgap, vgap);
     }
 
+    /**
+     * Returns the preferred dimensions for this layout.
+     *
+     * @param target the target container
+     * @return the preferred dimensions
+     */
     @Override
     public Dimension preferredLayoutSize(Container target) {
         return layoutSize(target, true);
     }
 
+    /**
+     * Returns the minimum dimensions for this layout.
+     *
+     * @param target the target container
+     * @return the minimum dimensions
+     */
     @Override
     public Dimension minimumLayoutSize(Container target) {
         return layoutSize(target, false);
     }
 
+    /**
+     * Calculates the layout size based on preferred or minimum component sizes.
+     *
+     * @param target    the target container
+     * @param preferred true for preferred size, false for minimum size
+     * @return the calculated dimensions
+     */
     private Dimension layoutSize(Container target, boolean preferred) {
         synchronized (target.getTreeLock()) {
             int targetWidth = target.getSize().width;

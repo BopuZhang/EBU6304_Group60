@@ -12,10 +12,26 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Frame for Module Organizers to view and manage applicants for their job positions.
+ * <p>
+ * This frame displays a list of applicants for each job posted by the MO,
+ * allowing them to accept or reject applications.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class MOViewApplicantsFrame extends JFrame {
+
+    /** Background color for alternating rows */
     private static final Color ROW_ALT = new Color(250, 250, 250);
+
+    /** Color for reject button */
     private static final Color REJECT_COLOR = UIHelper.DANGER_COLOR;
 
+    /** The currently logged-in user (Module Organizer) */
     private final User currentUser;
     private List<Job> myJobs;
     private List<Application> allApps;

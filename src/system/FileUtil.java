@@ -5,14 +5,36 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * File utility class for data persistence
+ * Utility class for file-based data persistence operations.
+ * <p>
+ * This class provides static methods for loading and saving all entity types
+ * (Users, Jobs, Applications, Profiles, Notifications) to CSV-formatted text
+ * files.
+ * All data is stored in the {@code data/} directory relative to the application
+ * root.
+ * </p>
+ * <p>
+ * The class also provides convenience methods for common queries such as
+ * finding a profile by email or retrieving notifications for a specific user.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2026
  */
 public class FileUtil {
 
+    /** Directory where all data files are stored */
     private static final String DATA_DIR = "data/";
 
     /**
-     * Save user list to file
+     * Saves a list of users to the users data file.
+     * <p>
+     * Creates the data directory if it does not exist.
+     * Each user is written as a CSV line via {@link User#toString()}.
+     * </p>
+     *
+     * @param users the list of users to save
      */
     public static void saveUsers(List<User> users) {
         try {
@@ -36,7 +58,13 @@ public class FileUtil {
     }
 
     /**
-     * Load user list from file
+     * Loads the list of users from the users data file.
+     * <p>
+     * Returns an empty list if the file does not exist.
+     * Invalid lines are logged as errors and skipped.
+     * </p>
+     *
+     * @return the list of users (never null)
      */
     public static List<User> loadUsers() {
         List<User> users = new ArrayList<>();
@@ -67,17 +95,26 @@ public class FileUtil {
     }
 
     // ========== Job Operations ==========
+
+    /**
+     * Loads the list of jobs from the jobs data file.
+     *
+     * @return the list of jobs (never null)
+     */
     public static List<Job> loadJobs() {
         List<Job> jobs = new ArrayList<>();
         File file = new File(DATA_DIR + "jobs.txt");
-        if (!file.exists()) return jobs;
+        if (!file.exists())
+            return jobs;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
+                if (line.trim().isEmpty())
+                    continue;
                 Job job = Job.fromString(line);
-                if (job != null) jobs.add(job);
+                if (job != null)
+                    jobs.add(job);
             }
         } catch (IOException e) {
             LoggerUtil.logError("File Operation", "Failed to load jobs: " + e.getMessage());
@@ -85,10 +122,16 @@ public class FileUtil {
         return jobs;
     }
 
+    /**
+     * Saves a list of jobs to the jobs data file.
+     *
+     * @param jobs the list of jobs to save
+     */
     public static void saveJobs(List<Job> jobs) {
         try {
             File dir = new File(DATA_DIR);
-            if (!dir.exists()) dir.mkdirs();
+            if (!dir.exists())
+                dir.mkdirs();
 
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "jobs.txt"))) {
                 for (Job job : jobs) {
@@ -102,17 +145,26 @@ public class FileUtil {
     }
 
     // ========== Application Operations ==========
+
+    /**
+     * Loads the list of applications from the applications data file.
+     *
+     * @return the list of applications (never null)
+     */
     public static List<Application> loadApplications() {
         List<Application> apps = new ArrayList<>();
         File file = new File(DATA_DIR + "applications.txt");
-        if (!file.exists()) return apps;
+        if (!file.exists())
+            return apps;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
+                if (line.trim().isEmpty())
+                    continue;
                 Application app = Application.fromString(line);
-                if (app != null) apps.add(app);
+                if (app != null)
+                    apps.add(app);
             }
         } catch (IOException e) {
             LoggerUtil.logError("File Operation", "Failed to load applications: " + e.getMessage());
@@ -120,10 +172,16 @@ public class FileUtil {
         return apps;
     }
 
+    /**
+     * Saves a list of applications to the applications data file.
+     *
+     * @param apps the list of applications to save
+     */
     public static void saveApplications(List<Application> apps) {
         try {
             File dir = new File(DATA_DIR);
-            if (!dir.exists()) dir.mkdirs();
+            if (!dir.exists())
+                dir.mkdirs();
 
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "applications.txt"))) {
                 for (Application app : apps) {
@@ -135,18 +193,28 @@ public class FileUtil {
             LoggerUtil.logError("File Operation", "Failed to save applications: " + e.getMessage());
         }
     }
+
     // ========== Profile Operations ==========
+
+    /**
+     * Loads the list of profiles from the profiles data file.
+     *
+     * @return the list of profiles (never null)
+     */
     public static List<Profile> loadProfiles() {
         List<Profile> profiles = new ArrayList<>();
         File file = new File(DATA_DIR + "profiles.txt");
-        if (!file.exists()) return profiles;
+        if (!file.exists())
+            return profiles;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
+                if (line.trim().isEmpty())
+                    continue;
                 Profile profile = Profile.fromString(line);
-                if (profile != null) profiles.add(profile);
+                if (profile != null)
+                    profiles.add(profile);
             }
         } catch (IOException e) {
             LoggerUtil.logError("File Operation", "Failed to load profiles: " + e.getMessage());
@@ -154,10 +222,16 @@ public class FileUtil {
         return profiles;
     }
 
+    /**
+     * Saves a list of profiles to the profiles data file.
+     *
+     * @param profiles the list of profiles to save
+     */
     public static void saveProfiles(List<Profile> profiles) {
         try {
             File dir = new File(DATA_DIR);
-            if (!dir.exists()) dir.mkdirs();
+            if (!dir.exists())
+                dir.mkdirs();
 
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "profiles.txt"))) {
                 for (Profile profile : profiles) {
@@ -170,6 +244,15 @@ public class FileUtil {
         }
     }
 
+    /**
+     * Finds a profile by email address.
+     * <p>
+     * Performs a case-insensitive search.
+     * </p>
+     *
+     * @param email the email to search for
+     * @return the matching Profile, or null if not found
+     */
     public static Profile getProfileByEmail(String email) {
         List<Profile> profiles = loadProfiles();
         System.out.println("=== getProfileByEmail ===");
@@ -188,17 +271,26 @@ public class FileUtil {
     }
 
     // ========== Notification Operations ==========
+
+    /**
+     * Loads the list of notifications from the notifications data file.
+     *
+     * @return the list of notifications (never null)
+     */
     public static List<Notification> loadNotifications() {
         List<Notification> notifications = new ArrayList<>();
         File file = new File(DATA_DIR + "notifications.txt");
-        if (!file.exists()) return notifications;
+        if (!file.exists())
+            return notifications;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
+                if (line.trim().isEmpty())
+                    continue;
                 Notification notification = Notification.fromString(line);
-                if (notification != null) notifications.add(notification);
+                if (notification != null)
+                    notifications.add(notification);
             }
         } catch (IOException e) {
             LoggerUtil.logError("File Operation", "Failed to load notifications: " + e.getMessage());
@@ -206,10 +298,16 @@ public class FileUtil {
         return notifications;
     }
 
+    /**
+     * Saves a list of notifications to the notifications data file.
+     *
+     * @param notifications the list of notifications to save
+     */
     public static void saveNotifications(List<Notification> notifications) {
         try {
             File dir = new File(DATA_DIR);
-            if (!dir.exists()) dir.mkdirs();
+            if (!dir.exists())
+                dir.mkdirs();
 
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIR + "notifications.txt"))) {
                 for (Notification notification : notifications) {
@@ -222,6 +320,15 @@ public class FileUtil {
         }
     }
 
+    /**
+     * Retrieves all notifications for a specific recipient.
+     * <p>
+     * Performs a case-insensitive email comparison.
+     * </p>
+     *
+     * @param email the recipient's email
+     * @return the list of notifications for the recipient (never null)
+     */
     public static List<Notification> getNotificationsByRecipient(String email) {
         List<Notification> allNotifications = loadNotifications();
         List<Notification> userNotifications = new ArrayList<>();
@@ -233,6 +340,12 @@ public class FileUtil {
         return userNotifications;
     }
 
+    /**
+     * Counts the number of unread notifications for a user.
+     *
+     * @param email the recipient's email
+     * @return the count of unread notifications
+     */
     public static int getUnreadNotificationCount(String email) {
         List<Notification> notifications = getNotificationsByRecipient(email);
         int count = 0;
@@ -244,16 +357,34 @@ public class FileUtil {
         return count;
     }
 
+    /**
+     * Sends a new notification to a recipient.
+     * <p>
+     * Generates a unique notification ID and timestamp automatically.
+     * The notification is initially marked as unread.
+     * </p>
+     *
+     * @param recipientEmail the recipient's email
+     * @param title          the notification title
+     * @param content        the notification content
+     * @param type           the notification type
+     */
     public static void sendNotification(String recipientEmail, String title, String content, String type) {
         List<Notification> notifications = loadNotifications();
         String notificationId = "NOT" + System.currentTimeMillis();
         String createTime = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
-        Notification notification = new Notification(notificationId, recipientEmail, title, content, type, createTime, false);
+        Notification notification = new Notification(notificationId, recipientEmail, title, content, type, createTime,
+                false);
         notifications.add(notification);
         saveNotifications(notifications);
         LoggerUtil.logInfo("Notification sent to: " + recipientEmail + " - " + title);
     }
 
+    /**
+     * Marks a specific notification as read.
+     *
+     * @param notificationId the ID of the notification to mark
+     */
     public static void markNotificationAsRead(String notificationId) {
         List<Notification> notifications = loadNotifications();
         for (Notification notification : notifications) {
@@ -265,6 +396,11 @@ public class FileUtil {
         saveNotifications(notifications);
     }
 
+    /**
+     * Marks all notifications for a user as read.
+     *
+     * @param email the recipient's email
+     */
     public static void markAllNotificationsAsRead(String email) {
         List<Notification> notifications = loadNotifications();
         for (Notification notification : notifications) {

@@ -11,8 +11,23 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Frame for Teaching Assistants to edit their profile information.
+ * <p>
+ * This frame allows TAs to modify their academic details, contact information,
+ * skills, and self-description.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class TAProfileEditFrame extends JFrame {
+
+    /** The currently logged-in user */
     private final User currentUser;
+
+    /** The profile being edited */
     private final Profile profile;
 
     private static final Color WHITE_BG = Color.WHITE;

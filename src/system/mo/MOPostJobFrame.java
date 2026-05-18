@@ -12,7 +12,20 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Frame for Module Organizers to post new TA job positions.
+ * <p>
+ * This frame provides a form for creating a new job position including
+ * module details, workload hours, deadline, and required skills.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class MOPostJobFrame extends JFrame {
+
+    /** The currently logged-in user (Module Organizer) */
     private final User currentUser;
 
     private JTextField moduleCodeField;

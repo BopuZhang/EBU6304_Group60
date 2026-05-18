@@ -8,12 +8,35 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.*;
 import java.util.List;
 
+/**
+ * Frame for Teaching Assistants to view the status of their job applications.
+ * <p>
+ * This frame displays a table of all applications submitted by the TA
+ * with their current status (Pending, Accepted, Rejected).
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
+ */
 public class TAApplicationStatusFrame extends JFrame {
+
+    /** The currently logged-in user */
     private final User currentUser;
+
+    /** List of all applications */
     private List<Application> applications;
+
+    /** List of all jobs */
     private List<Job> jobs;
+
+    /** Table displaying the applications */
     private JTable appTable;
+
+    /** Table model for the applications table */
     private DefaultTableModel tableModel;
+
+    /** Label showing application statistics */
     private JLabel statsLabel;
 
     private static final Color WHITE_BG = Color.WHITE;
@@ -63,8 +86,7 @@ public class TAApplicationStatusFrame extends JFrame {
         header.setBackground(WHITE_BG);
         header.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
-                BorderFactory.createEmptyBorder(20, 28, 18, 28)
-        ));
+                BorderFactory.createEmptyBorder(20, 28, 18, 28)));
 
         JPanel leftGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
         leftGroup.setBackground(WHITE_BG);
@@ -164,8 +186,7 @@ public class TAApplicationStatusFrame extends JFrame {
         bar.setBackground(WHITE_BG);
         bar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(241, 245, 249)),
-                BorderFactory.createEmptyBorder(12, 28, 12, 28)
-        ));
+                BorderFactory.createEmptyBorder(12, 28, 12, 28)));
 
         statsLabel = new JLabel();
         statsLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
@@ -179,12 +200,16 @@ public class TAApplicationStatusFrame extends JFrame {
     private void updateStats() {
         int total = 0, accepted = 0, pending = 0, rejected = 0;
         for (Application app : applications) {
-            if (!app.getTaEmail().equals(currentUser.getEmail())) continue;
+            if (!app.getTaEmail().equals(currentUser.getEmail()))
+                continue;
             total++;
             String status = app.getStatus();
-            if ("ACCEPTED".equalsIgnoreCase(status)) accepted++;
-            else if ("REJECTED".equalsIgnoreCase(status)) rejected++;
-            else pending++;
+            if ("ACCEPTED".equalsIgnoreCase(status))
+                accepted++;
+            else if ("REJECTED".equalsIgnoreCase(status))
+                rejected++;
+            else
+                pending++;
         }
         statsLabel.setText(String.format(
                 "<html>Total: <b style='color:#1E293B'>%d</b> &nbsp;&nbsp;"
@@ -223,13 +248,18 @@ public class TAApplicationStatusFrame extends JFrame {
 
         tableModel = new DefaultTableModel(data, columns) {
             @Override
-            public boolean isCellEditable(int row, int col) { return false; }
+            public boolean isCellEditable(int row, int col) {
+                return false;
+            }
 
             @Override
             public Class<?> getColumnClass(int col) {
-                if (col == 0) return Integer.class;
-                if (col == 4) return Integer.class;
-                if (col == 5) return String.class;
+                if (col == 0)
+                    return Integer.class;
+                if (col == 4)
+                    return Integer.class;
+                if (col == 5)
+                    return String.class;
                 return String.class;
             }
         };
@@ -281,7 +311,8 @@ public class TAApplicationStatusFrame extends JFrame {
         public Component getTableCellRendererComponent(JTable table, Object value,
                 boolean selected, boolean focused, int row, int col) {
             super.getTableCellRendererComponent(table, value, selected, focused, row, col);
-            setHorizontalAlignment(col == 0 ? SwingConstants.CENTER : (col == 4 ? SwingConstants.CENTER : SwingConstants.CENTER));
+            setHorizontalAlignment(
+                    col == 0 ? SwingConstants.CENTER : (col == 4 ? SwingConstants.CENTER : SwingConstants.CENTER));
             setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
             setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
             setForeground(TEXT_DARK);
@@ -375,7 +406,8 @@ public class TAApplicationStatusFrame extends JFrame {
 
     private Job findJob(String jobId) {
         for (Job job : jobs) {
-            if (job.getJobId().equals(jobId)) return job;
+            if (job.getJobId().equals(jobId))
+                return job;
         }
         return null;
     }

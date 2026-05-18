@@ -12,29 +12,72 @@ import java.awt.event.MouseEvent;
 import java.util.List;
 
 /**
- * UI helper class for consistent modern styling (Pure Swing, no external
- * libraries)
+ * Utility class providing consistent modern UI styling for Swing components.
+ * <p>
+ * This class offers a centralized design system with:
+ * </p>
+ * <ul>
+ * <li>A Tailwind-inspired color palette</li>
+ * <li>Rounded buttons with hover/press effects</li>
+ * <li>Styled text fields with focus indicators</li>
+ * <li>Card panels with subtle shadows</li>
+ * <li>Modern scroll bars</li>
+ * <li>Styled dialog boxes</li>
+ * </ul>
+ * <p>
+ * All components are created using pure Swing without external libraries.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2026
  */
 public class UIHelper {
 
-    // Modern color palette (Tailwind-inspired, muted & elegant)
-    public static final Color PRIMARY_COLOR = new Color(79, 70, 229); // Indigo 600
-    public static final Color SECONDARY_COLOR = new Color(99, 102, 241); // Indigo 500
-    public static final Color ACCENT_COLOR = new Color(234, 138, 56); // Warm amber
-    public static final Color BACKGROUND_COLOR = new Color(249, 250, 251); // Gray 50
-    public static final Color CARD_COLOR = Color.WHITE;
-    public static final Color SUCCESS_COLOR = new Color(72, 175, 130); // Muted teal-green
-    public static final Color DANGER_COLOR = new Color(210, 108, 108); // Muted soft red
-    public static final Color DISABLED_COLOR = new Color(170, 170, 180); // Soft cool gray
+    /** Primary color (Indigo 600) - used for main actions */
+    public static final Color PRIMARY_COLOR = new Color(79, 70, 229);
 
-    private static final int BORDER_RADIUS = 12; // Uniform corner radius
-    private static final int SHADOW_OFFSET = 3; // Shadow offset distance
+    /** Secondary color (Indigo 500) - used for secondary elements */
+    public static final Color SECONDARY_COLOR = new Color(99, 102, 241);
+
+    /** Accent color (Warm amber) - used for highlights */
+    public static final Color ACCENT_COLOR = new Color(234, 138, 56);
+
+    /** Background color (Gray 50) - main application background */
+    public static final Color BACKGROUND_COLOR = new Color(249, 250, 251);
+
+    /** Card background color */
+    public static final Color CARD_COLOR = Color.WHITE;
+
+    /** Success color (Muted teal-green) - for positive states */
+    public static final Color SUCCESS_COLOR = new Color(72, 175, 130);
+
+    /** Danger color (Muted soft red) - for errors and destructive actions */
+    public static final Color DANGER_COLOR = new Color(210, 108, 108);
+
+    /** Disabled color (Soft cool gray) - for disabled elements */
+    public static final Color DISABLED_COLOR = new Color(170, 170, 180);
+
+    /** Uniform corner radius for rounded components */
+    private static final int BORDER_RADIUS = 12;
+
+    /** Shadow offset distance for card panels */
+    private static final int SHADOW_OFFSET = 3;
 
     // ---------- Custom rounded border for text fields ----------
+    /**
+     * Custom border implementation that draws rounded corners.
+     */
     private static class RoundedBorder extends AbstractBorder {
         private final Color borderColor;
         private final int radius;
 
+        /**
+         * Creates a rounded border with the specified color and radius.
+         *
+         * @param borderColor the border color
+         * @param radius      the corner radius
+         */
         public RoundedBorder(Color borderColor, int radius) {
             this.borderColor = borderColor;
             this.radius = radius;
@@ -55,7 +98,15 @@ public class UIHelper {
         }
     }
 
-    // ---------- Helper method to draw a shadow ----------
+    /**
+     * Paints a subtle shadow effect for card-like components.
+     *
+     * @param g      the Graphics context
+     * @param width  the component width
+     * @param height the component height
+     * @param offset the shadow offset
+     * @param radius the corner radius
+     */
     private static void paintShadow(Graphics g, int width, int height, int offset, int radius) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -66,7 +117,17 @@ public class UIHelper {
         g2.dispose();
     }
 
-    // ---------- Create a rounded button with hover/press effects ----------
+    /**
+     * Creates a rounded button with hover and press effects.
+     * <p>
+     * The button is fully custom-painted with rounded corners and
+     * interactive color changes on hover and press.
+     * </p>
+     *
+     * @param text    the button text
+     * @param bgColor the background color
+     * @return the styled JButton
+     */
     public static JButton createButton(String text, Color bgColor) {
         JButton button = new JButton(text) {
             @Override
@@ -138,7 +199,12 @@ public class UIHelper {
         return button;
     }
 
-    // ---------- Create a title label ----------
+    /**
+     * Creates a title label with the primary color and bold font.
+     *
+     * @param text the title text
+     * @return the styled JLabel
+     */
     public static JLabel createTitle(String text) {
         JLabel label = new JLabel(text);
         label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
@@ -147,8 +213,14 @@ public class UIHelper {
         return label;
     }
 
-    // ---------- Create a text field with rounded corners and focus effect
-    // ----------
+    /**
+     * Creates a text field with rounded corners and focus effect.
+     * <p>
+     * The border color changes to the primary color when focused.
+     * </p>
+     *
+     * @return the styled JTextField
+     */
     public static JTextField createTextField() {
         JTextField field = new JTextField();
         field.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
@@ -170,8 +242,14 @@ public class UIHelper {
         return field;
     }
 
-    // ---------- Create a password field with rounded corners and focus effect
-    // ----------
+    /**
+     * Creates a password field with rounded corners and focus effect.
+     * <p>
+     * The border color changes to the primary color when focused.
+     * </p>
+     *
+     * @return the styled JPasswordField
+     */
     public static JPasswordField createPasswordField() {
         JPasswordField field = new JPasswordField();
         field.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
@@ -193,7 +271,15 @@ public class UIHelper {
         return field;
     }
 
-    // ---------- Create a card panel with a subtle shadow ----------
+    /**
+     * Creates a card panel with a subtle shadow effect.
+     * <p>
+     * The panel has a white background with rounded corners and
+     * a soft drop shadow for a modern card-like appearance.
+     * </p>
+     *
+     * @return the styled JPanel
+     */
     public static JPanel createCardPanel() {
         JPanel panel = new JPanel() {
             @Override
@@ -213,11 +299,22 @@ public class UIHelper {
         return panel;
     }
 
-    // ---------- Convenience methods for buttons ----------
+    /**
+     * Creates a primary-styled button.
+     *
+     * @param text the button text
+     * @return the styled JButton with PRIMARY_COLOR
+     */
     public static JButton createPrimaryButton(String text) {
         return createButton(text, PRIMARY_COLOR);
     }
 
+    /**
+     * Creates an accent-styled button.
+     *
+     * @param text the button text
+     * @return the styled JButton with ACCENT_COLOR
+     */
     public static JButton createAccentButton(String text) {
         return createButton(text, ACCENT_COLOR);
     }
@@ -506,6 +603,13 @@ public class UIHelper {
         return button;
     }
 
+    /**
+     * Calculates the skill match percentage between a TA and a job.
+     *
+     * @param taSkills  the TA's skills
+     * @param jobSkills the job's required skills
+     * @return the match percentage (0-100), or -1 if job has no skills
+     */
     public static int calculateSkillMatch(List<String> taSkills, List<String> jobSkills) {
         if (jobSkills == null || jobSkills.isEmpty())
             return -1;
@@ -523,6 +627,12 @@ public class UIHelper {
         return (int) ((matched / (double) jobSkills.size()) * 100);
     }
 
+    /**
+     * Creates a styled skill tag label.
+     *
+     * @param text the skill text
+     * @return the styled JLabel
+     */
     public static JLabel createSkillTag(String text) {
         JLabel tag = new JLabel(text);
         tag.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));

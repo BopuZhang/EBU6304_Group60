@@ -9,15 +9,38 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Frame for Admin to manage TA workload (remove TA from positions).
+ * Frame for administrators to manage TA workload.
+ * <p>
+ * This frame displays a table of TAs with their workload hours and overload status.
+ * Administrators can view TA details and manage their assignments.
+ * </p>
+ *
+ * @author EBU6304 Group60
+ * @version 1.0
+ * @since 2025
  */
 public class AdminManageWorkloadFrame extends JFrame {
+
+    /** List of all users in the system */
     private final List<User> users;
+
+    /** List of all TA profiles */
     private final List<Profile> allProfiles;
+
+    /** List of all applications */
     private final List<Application> allApps;
+
+    /** List of all jobs */
     private final List<Job> allJobs;
+
+    /** Main content panel */
     private JPanel mainPanel;
 
+    /**
+     * Constructs the frame to manage TA workload.
+     *
+     * @param users the list of all users
+     */
     public AdminManageWorkloadFrame(List<User> users) {
         this.users = users;
         this.allProfiles = FileUtil.loadProfiles();
