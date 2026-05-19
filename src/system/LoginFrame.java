@@ -1,46 +1,20 @@
 package system;
 
 import javax.swing.*;
-
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * The login frame for the TA Recruitment System.
- * <p>
- * This frame provides user authentication with email and password fields.
- * On first run, a default admin account is created.
- * After successful login, users are redirected to the appropriate dashboard
- * based on their role (TA, MO, or Admin).
- * </p>
- *
- * @author EBU6304 Group60
- * @version 1.0
- * @since 2026
- */
 public class LoginFrame extends JFrame {
-
-    /** Email input field */
     private JTextField emailField;
-
-    /** Password input field */
     private JPasswordField passwordField;
-
-    /** Toggle button to show/hide password */
     private JToggleButton passwordToggleBtn;
-
-    /** List of registered users */
     private List<User> users;
 
-    /**
-     * Constructs the login frame and initializes the UI.
-     * <p>
-     * Creates a default admin account if no users exist.
-     * </p>
-     */
     public LoginFrame() {
         setTitle("TA Recruitment System");
         setSize(600, 550);
@@ -62,10 +36,8 @@ public class LoginFrame extends JFrame {
     }
 
     /**
-     * Creates a password field with a toggle button to show/hide the password.
-     * <p>
-     * The toggle uses emoji icons: open eye for visible, monkey for hidden.
-     * </p>
+     * Creates a password field with a toggle button that shows/hides the password.
+     * The toggle uses emojis: open eye for visible, closed eye for hidden.
      *
      * @return a panel containing the styled password field and toggle button
      */
@@ -89,7 +61,7 @@ public class LoginFrame extends JFrame {
         passwordToggleBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         final String OPEN_EYE = "👁️";
-        final String CLOSED_EYE = "\uD83D\uDE48"; // "see-no-evil" monkey
+        final String CLOSED_EYE = "\uD83D\uDE48";  // "see-no-evil" monkey
 
         passwordToggleBtn.setText(CLOSED_EYE);
         passwordToggleBtn.setSelected(false);
@@ -109,9 +81,6 @@ public class LoginFrame extends JFrame {
         return panel;
     }
 
-    /**
-     * Initializes the user interface components.
-     */
     private void initUI() {
         // Main panel
         JPanel mainPanel = new JPanel();
@@ -215,9 +184,8 @@ public class LoginFrame extends JFrame {
             }
         });
 
-        forgotPasswordBtn.addActionListener(e -> {
-            UIHelper.showInfoDialog(this, "Feature coming soon!", "Info");
-        });
+        // Show styled forgot password dialog
+        forgotPasswordBtn.addActionListener(e -> showForgotPasswordDialog());
 
         cardGbc.gridy = y;
         cardGbc.gridx = 0;
@@ -243,12 +211,207 @@ public class LoginFrame extends JFrame {
     }
 
     /**
-     * Handles the login process.
-     * <p>
-     * Validates the entered credentials and redirects to the appropriate
-     * dashboard on success, or shows an error message on failure.
-     * </p>
+     * Handles the "Forgot Password" flow with email and verification code.
      */
+    private void showForgotPasswordDialog() {
+        // Step 1: Email input panel (styled with UIHelper)
+        JPanel emailPanel = new JPanel(new BorderLayout(10, 10));
+        emailPanel.setBackground(UIHelper.CARD_COLOR);
+        emailPanel.add(new JLabel("Enter your email address:"), BorderLayout.NORTH);
+        JTextField emailInput = UIHelper.createTextField();
+        emailInput.setPreferredSize(new Dimension(250, 35));
+        emailPanel.add(emailInput, BorderLayout.CENTER);
+
+        int emailResult = UIHelper.showConfirmDialog(this, emailPanel, "Forgot Password", JOptionPane.OK_CANCEL_OPTION);
+        if (emailResult != JOptionPane.OK_OPTION) return;
+
+        String email = emailInput.getText().trim();
+        if (email.isEmpty()) {
+            UIHelper.showWarningDialog(this, "Email cannot be empty.", "Warning");
+            return;
+        }
+
+        // Find user
+        User targetUser = null;
+        for (User u : users) {
+            if (u.getEmail().equals(email)) {
+                targetUser = u;
+                break;
+            }
+        }
+        if (targetUser == null) {
+            UIHelper.showErrorDialog(this, "No account found with that email.", "Error");
+            return;
+        }
+
+        // Step 2: Verification code panel (fixed to "12345")
+        JPanel codePanel = new JPanel(new BorderLayout(10, 10));
+        codePanel.setBackground(UIHelper.CARD_COLOR);
+        codePanel.add(new JLabel("Verification code (simulation: 12345):"), BorderLayout.NORTH);
+        JTextField codeInput = UIHelper.createTextField();
+        codeInput.setPreferredSize(new Dimension(250, 35));
+        codePanel.add(codeInput, BorderLayout.CENTER);
+
+        int codeResult = UIHelper.showConfirmDialog(this, codePanel, "Verification Code", JOptionPane.OK_CANCEL_OPTION);
+        if (codeResult != JOptionPane.OK_OPTION) return;
+
+        if (!"12345".equals(codeInput.getText().trim())) {
+            UIHelper.showErrorDialog(this, "Invalid verification code.", "Error");
+            return;
+        }
+
+        // Step 3: Password reset dialog with real-time validation
+        showPasswordResetDialog(targetUser);
+    }
+
+    /**
+     * Custom dialog for resetting password with real-time validation (similar to RegisterFrame).
+     */
+    private void showPasswordResetDialog(User user) {
+        JDialog dialog = new JDialog(this, "Reset Password", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setBackground(UIHelper.BACKGROUND_COLOR);
+
+        // Main container with scroll (optional, but keeps consistency)
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(UIHelper.BACKGROUND_COLOR);
+
+        JPanel cardPanel = UIHelper.createCardPanel();
+        cardPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 15, 10, 15);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+
+        int row = 0;
+
+        // Title
+        JLabel titleLabel = new JLabel("Set New Password");
+        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        titleLabel.setForeground(UIHelper.PRIMARY_COLOR);
+        gbc.gridy = row++;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        cardPanel.add(titleLabel, gbc);
+        gbc.gridwidth = 1;
+
+        // New Password field
+        JLabel newPassLabel = new JLabel("New Password:");
+        newPassLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        cardPanel.add(newPassLabel, gbc);
+
+        JPasswordField newPassField = UIHelper.createPasswordField();
+        newPassField.setPreferredSize(new Dimension(250, 40));
+        newPassField.setEchoChar('●');
+        gbc.gridx = 1;
+        cardPanel.add(newPassField, gbc);
+        row++;
+
+        JLabel newPassError = new JLabel(" ");
+        newPassError.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        newPassError.setForeground(new Color(220, 53, 69));
+        gbc.gridy = row++;
+        gbc.gridx = 1;
+        gbc.insets = new Insets(0, 15, 5, 15);
+        cardPanel.add(newPassError, gbc);
+        gbc.insets = new Insets(10, 15, 10, 15);
+
+        // Confirm Password field
+        JLabel confirmLabel = new JLabel("Confirm Password:");
+        confirmLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        cardPanel.add(confirmLabel, gbc);
+
+        JPasswordField confirmPassField = UIHelper.createPasswordField();
+        confirmPassField.setPreferredSize(new Dimension(250, 40));
+        confirmPassField.setEchoChar('●');
+        gbc.gridx = 1;
+        cardPanel.add(confirmPassField, gbc);
+        row++;
+
+        JLabel confirmError = new JLabel(" ");
+        confirmError.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        confirmError.setForeground(new Color(220, 53, 69));
+        gbc.gridy = row++;
+        gbc.gridx = 1;
+        gbc.insets = new Insets(0, 15, 5, 15);
+        cardPanel.add(confirmError, gbc);
+        gbc.insets = new Insets(10, 15, 10, 15);
+
+        // Buttons panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        JButton resetBtn = UIHelper.createPrimaryButton("Reset Password");
+        JButton cancelBtn = UIHelper.createButton("Cancel", UIHelper.SECONDARY_COLOR);
+        resetBtn.setEnabled(false);
+        buttonPanel.add(resetBtn);
+        buttonPanel.add(cancelBtn);
+
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(20, 15, 15, 15);
+        cardPanel.add(buttonPanel, gbc);
+
+        mainPanel.add(cardPanel, BorderLayout.CENTER);
+        dialog.add(mainPanel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+
+        // Real-time validation listener
+        DocumentListener validationListener = new DocumentListener() {
+            private void validate() {
+                String newPass = new String(newPassField.getPassword());
+                String confirmPass = new String(confirmPassField.getPassword());
+
+                boolean passValid = true;
+                boolean confirmValid = true;
+
+                if (newPass.isEmpty()) {
+                    newPassError.setText("Password is required");
+                    passValid = false;
+                } else if (newPass.length() < 8) {
+                    newPassError.setText("Password must be at least 8 characters");
+                    passValid = false;
+                } else {
+                    newPassError.setText(" ");
+                }
+
+                if (confirmPass.isEmpty()) {
+                    confirmError.setText("Please confirm your password");
+                    confirmValid = false;
+                } else if (!newPass.equals(confirmPass)) {
+                    confirmError.setText("Passwords do not match");
+                    confirmValid = false;
+                } else {
+                    confirmError.setText(" ");
+                }
+
+                resetBtn.setEnabled(passValid && confirmValid && newPass.equals(confirmPass));
+            }
+
+            @Override public void insertUpdate(DocumentEvent e) { validate(); }
+            @Override public void removeUpdate(DocumentEvent e) { validate(); }
+            @Override public void changedUpdate(DocumentEvent e) { validate(); }
+        };
+
+        newPassField.getDocument().addDocumentListener(validationListener);
+        confirmPassField.getDocument().addDocumentListener(validationListener);
+
+        resetBtn.addActionListener(e -> {
+            user.setPassword(new String(newPassField.getPassword()));
+            FileUtil.saveUsers(users);
+            UIHelper.showInfoDialog(dialog, "Password has been reset successfully! Please login with your new password.", "Success");
+            dialog.dispose();
+        });
+
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        dialog.setVisible(true);
+    }
+
     private void login() {
         String email = emailField.getText().trim();
         String password = new String(passwordField.getPassword());
@@ -270,11 +433,6 @@ public class LoginFrame extends JFrame {
         UIHelper.showErrorDialog(this, "Invalid email or password", "Login Failed");
     }
 
-    /**
-     * Application entry point.
-     *
-     * @param args command line arguments
-     */
     public static void main(String[] args) {
         Locale.setDefault(Locale.ENGLISH);
         new LoginFrame();

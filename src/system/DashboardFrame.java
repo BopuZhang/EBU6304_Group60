@@ -30,6 +30,12 @@ public class DashboardFrame extends JFrame {
     /** List of all users in the system */
     private final List<User> users;
 
+    /** Notification button in top bar */
+    private JButton notificationBtn;
+
+    /** Badge label for unread count */
+    private JLabel badgeLabel;
+
     /**
      * Constructs the dashboard frame for the specified user.
      *
@@ -113,15 +119,17 @@ public class DashboardFrame extends JFrame {
         JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         userPanel.setOpaque(false);
 
-        int unreadCount = FileUtil.getUnreadNotificationCount(currentUser.getEmail());
-        JButton notificationBtn = new JButton("📬");
+        // Notification button
+        notificationBtn = new JButton("📬");
         notificationBtn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
         notificationBtn.setBackground(Color.WHITE);
         notificationBtn.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         notificationBtn.setFocusPainted(false);
         notificationBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        notificationBtn.setToolTipText("Notifications" + (unreadCount > 0 ? " (" + unreadCount + " unread)" : ""));
-        notificationBtn.addActionListener(e -> new NotificationFrame(currentUser));
+        notificationBtn.addActionListener(e -> {
+            // Open notification frame with callback to refresh badge
+            new NotificationFrame(currentUser, this::updateNotificationBadge);
+        });
         notificationBtn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
                 notificationBtn.setBackground(new Color(245, 245, 245));
@@ -133,15 +141,19 @@ public class DashboardFrame extends JFrame {
         });
         userPanel.add(notificationBtn);
 
-        if (unreadCount > 0) {
-            JLabel badgeLabel = new JLabel(String.valueOf(unreadCount));
-            badgeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
-            badgeLabel.setForeground(Color.WHITE);
-            badgeLabel.setBackground(UIHelper.DANGER_COLOR);
-            badgeLabel.setOpaque(true);
-            badgeLabel.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
-            userPanel.add(badgeLabel);
-        }
+        // Badge for unread count
+        int unreadCount = FileUtil.getUnreadNotificationCount(currentUser.getEmail());
+        badgeLabel = new JLabel(String.valueOf(unreadCount));
+        badgeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+        badgeLabel.setForeground(Color.WHITE);
+        badgeLabel.setBackground(UIHelper.DANGER_COLOR);
+        badgeLabel.setOpaque(true);
+        badgeLabel.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+        badgeLabel.setVisible(unreadCount > 0);
+        userPanel.add(badgeLabel);
+
+        // Update tooltip
+        notificationBtn.setToolTipText("Notifications" + (unreadCount > 0 ? " (" + unreadCount + " unread)" : ""));
 
         JLabel userIcon = new JLabel("👤");
         userIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
@@ -182,6 +194,30 @@ public class DashboardFrame extends JFrame {
                 topBar.getBorder()));
 
         return topBar;
+    }
+
+    /**
+     * Updates the notification badge and tooltip based on current unread count.
+     * This method is called after notifications are marked as read.
+     */
+    private void updateNotificationBadge() {
+        int unreadCount = FileUtil.getUnreadNotificationCount(currentUser.getEmail());
+        if (unreadCount > 0) {
+            badgeLabel.setText(String.valueOf(unreadCount));
+            badgeLabel.setVisible(true);
+            notificationBtn.setToolTipText("Notifications (" + unreadCount + " unread)");
+        } else {
+            badgeLabel.setVisible(false);
+            notificationBtn.setToolTipText("Notifications");
+        }
+        // Revalidate the top bar to refresh layout
+        SwingUtilities.invokeLater(() -> {
+            Container topBar = notificationBtn.getParent().getParent();
+            if (topBar != null) {
+                topBar.revalidate();
+                topBar.repaint();
+            }
+        });
     }
 
     /**
@@ -251,7 +287,7 @@ public class DashboardFrame extends JFrame {
      * @param action      the action to perform on click
      */
     private void addCard(JPanel grid, GridBagConstraints gbc, int col, int row,
-            String title, String description, java.awt.event.ActionListener action) {
+                         String title, String description, java.awt.event.ActionListener action) {
         gbc.gridx = col;
         gbc.gridy = row;
 

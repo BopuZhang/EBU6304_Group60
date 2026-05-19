@@ -673,4 +673,28 @@ public class UIHelper {
         }
         return label;
     }
+
+    /**
+     * Show a styled confirmation dialog with a custom panel as message.
+     * @param parent parent component
+     * @param panel custom panel to display
+     * @param title dialog title
+     * @param optionType option type (e.g., JOptionPane.OK_CANCEL_OPTION)
+     * @return user's option
+     */
+    public static int showConfirmDialog(Component parent, JPanel panel, String title, int optionType) {
+        JOptionPane optionPane = new JOptionPane(panel, JOptionPane.PLAIN_MESSAGE, optionType);
+        JDialog dialog = optionPane.createDialog(parent, title);
+        styleDialogButtons(optionPane);
+        dialog.setVisible(true);
+
+        Object selectedValue = optionPane.getValue();
+        if (selectedValue == null) {
+            return JOptionPane.CLOSED_OPTION;
+        }
+        if (selectedValue instanceof Integer) {
+            return (Integer) selectedValue;
+        }
+        return JOptionPane.CLOSED_OPTION;
+    }
 }
