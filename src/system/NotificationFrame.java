@@ -34,13 +34,27 @@ public class NotificationFrame extends JFrame {
     /** List of notifications for the current user */
     private List<Notification> notifications;
 
+    /** Callback to be executed when read status changes (e.g., update dashboard badge) */
+    private Runnable onReadChangeCallback;
+
     /**
      * Constructs the notification frame for the specified user.
      *
      * @param user the logged-in user
      */
     public NotificationFrame(User user) {
+        this(user, null);
+    }
+
+    /**
+     * Constructs the notification frame with a callback for read status changes.
+     *
+     * @param user               the logged-in user
+     * @param onReadChangeCallback callback to run when notifications are marked read
+     */
+    public NotificationFrame(User user, Runnable onReadChangeCallback) {
         this.currentUser = user;
+        this.onReadChangeCallback = onReadChangeCallback;
 
         setTitle("Notification Center");
         setSize(700, 600);
@@ -241,6 +255,10 @@ public class NotificationFrame extends JFrame {
                 if (!notification.isRead()) {
                     FileUtil.markNotificationAsRead(notification.getNotificationId());
                     refreshNotifications(listPanel);
+                    // Execute callback to update dashboard badge
+                    if (onReadChangeCallback != null) {
+                        onReadChangeCallback.run();
+                    }
                 }
             }
 
@@ -297,5 +315,9 @@ public class NotificationFrame extends JFrame {
         FileUtil.markAllNotificationsAsRead(currentUser.getEmail());
         refreshNotifications(listPanel);
         UIHelper.showInfoDialog(this, "All notifications marked as read", "Success");
+        // Execute callback to update dashboard badge
+        if (onReadChangeCallback != null) {
+            onReadChangeCallback.run();
+        }
     }
 }
