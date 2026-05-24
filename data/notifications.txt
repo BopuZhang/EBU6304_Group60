@@ -4,3 +4,7 @@ NOT1779024397514,953934381@qq.com,New Application Received,Bopu Zhang has applie
 NOT1779024524360,953934380@qq.com,Application Status Update,Your application for EBU6202 - Go has been ACCEPTED.,STATUS_UPDATE,2026-05-17 21:28:44,true
 NOT1779111055394,953934381@qq.com,New Application Received,Bopu Zhang has applied for: EBU6754 - TypeScript,APPLICATION,2026-05-18 21:30:55,true
 NOT1779111179521,953934380@qq.com,Application Status Update,Your application for EBU6754 - TypeScript has been ACCEPTED.,STATUS_UPDATE,2026-05-18 21:32:59,true
+NOT1779452102305,953934381@qq.com,New Application Received,Bopu Zhang has applied for: EBU7890 - JavaScript,APPLICATION,2026-05-22 20:15:02,false
+NOT1779452278897,953934380@qq.com,Application Status Update,Your application for EBU7890 - JavaScript has been ACCEPTED.,STATUS_UPDATE,2026-05-22 20:17:58,false
+NOT1779584677244,953934381@qq.com,New Application Received,Yinan Gao has applied for: EBU6202 - Go,APPLICATION,2026-05-24 09:04:37,false
+NOT1779585373754,953934381@qq.com,New Application Received,Bopu Zhang has applied for: 1234 - UI,APPLICATION,2026-05-24 09:16:13,false
